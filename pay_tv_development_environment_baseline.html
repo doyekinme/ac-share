@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Multi-Platform Player 개발·기술 검증 및 서비스 배포 전환 · 2026-08</title>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@latest/dist/web/static/pretendard.min.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    --ink:#0d0d0d; --ink2:#1b1b1b; --paper:#f6f5f1; --paper2:#eceae3;
+    --line:#cbc9bd; --line-dk:#464646;
+    --g1:#726f66; --g2:#585750; --g3:#7c7a72;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+    --sans:'Pretendard','Pretendard Variable',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:#0a0a0a;font-family:var(--sans);color:var(--ink);overflow:hidden;
+    -webkit-font-smoothing:antialiased;display:flex;align-items:center;justify-content:center}
+  #scaler{position:relative;width:1280px;height:720px;transform-origin:center center}
+  .stage{position:absolute;inset:0;width:1280px;height:720px;overflow:hidden}
+  .s{position:absolute;inset:0;opacity:0;pointer-events:none;
+     transition:opacity .42s ease, transform .42s ease;transform:translateY(10px) scale(.997)}
+  .s.active{opacity:1;pointer-events:auto;transform:none}
+  .s.light{background:var(--paper);color:var(--ink)}
+  .s.dark{background:var(--ink);color:var(--paper)}
+  .dark{--line:var(--line-dk)}
+  .s.dark{--g1:#98978d;--g2:#8b8a82;--g3:#aaa9a1}
+  .mock,.spec,.rcard{--g1:#726f66;--g2:#585750;--g3:#7c7a72;--line:#cbc9bd}
+  .grid-bg{position:absolute;inset:0;pointer-events:none;
+    background-image:radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px);background-size:26px 26px}
+  .pad{position:absolute;inset:0;padding:96px 96px 78px}
+
+  .chrome{position:absolute;inset:0;pointer-events:none;z-index:30}
+  .chrome .mark{position:absolute;top:33px;left:46px;font-family:var(--mono);font-size:13px;
+    letter-spacing:.16em;font-weight:700;display:flex;align-items:center;gap:10px}
+  .chrome .mark .dot{width:10px;height:10px;border:1.5px solid currentColor;display:inline-block;position:relative}
+  .chrome .mark .dot::after{content:"";position:absolute;inset:2px;background:currentColor}
+  .chrome .idx{position:absolute;top:33px;right:46px;font-family:var(--mono);font-size:13px;letter-spacing:.12em;font-weight:500}
+  .chrome .idx b{font-weight:700}
+  .chrome .foot{position:absolute;bottom:29px;left:46px;font-family:var(--mono);font-size:13px;
+    letter-spacing:.12em;color:var(--g2)}
+  .progress{position:absolute;bottom:0;left:0;height:3px;z-index:31;background:#bdbcb4;
+    mix-blend-mode:difference;transition:width .42s ease}
+  .zone{position:absolute;top:0;bottom:0;width:30%;z-index:20;cursor:pointer}
+  .zone.prev{left:0}.zone.next{right:0}
+  .zone .arr{position:absolute;top:50%;transform:translateY(-50%);font-family:var(--mono);
+    font-size:30px;opacity:0;transition:opacity .2s;color:var(--g2)}
+  .zone.prev .arr{left:22px}.zone.next .arr{right:22px}
+  .zone:hover .arr{opacity:.55}
+
+  .eyebrow{font-family:var(--mono);font-size:14px;letter-spacing:.24em;font-weight:700;text-transform:uppercase;color:var(--g2)}
+  .s.dark .eyebrow{color:var(--g3)}
+  .kicker-rule{width:34px;height:2px;background:currentColor;display:inline-block;vertical-align:middle;margin-right:14px}
+  .head{display:flex;align-items:center;margin-bottom:8px}
+  .ttl{font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1.16;color:var(--ink);margin-bottom:20px;word-break:keep-all}
+  .ttl.sm{font-size:28px;line-height:1.2}
+  .ttl.wsub{margin-bottom:6px}
+  .s.dark .ttl{color:var(--paper)}
+  .sub{font-size:16px;font-weight:400;color:var(--g2);line-height:1.5;max-width:920px;margin-bottom:20px;word-break:keep-all}
+  .s.dark .sub{color:var(--g3)}
+
+  /* ---- content shell ---- */
+  .c .pad{display:flex;flex-direction:column}
+  .grow{flex:1;min-height:0}
+  .band{margin-top:auto;padding-top:14px;border-top:1.5px solid var(--ink);font-size:14px;
+    line-height:1.55;color:#3a3a3a;word-break:keep-all}
+  .band b{color:var(--ink);font-weight:700}
+  .s.dark .band{border-top-color:var(--paper);color:var(--g3)}
+  .s.dark .band b{color:var(--paper)}
+  .note{font-family:var(--mono);font-size:13px;color:var(--g2);margin-top:10px;letter-spacing:.02em}
+  .diagram{background:#f0efe9;border:1px solid var(--line);padding:18px 20px;border-radius:4px;font-family:var(--mono);font-size:13px;line-height:1.55;white-space:pre-wrap;overflow:hidden;color:#2f2f2c}
+  .s.dark .diagram{background:#181818;border-color:var(--line-dk);color:#d7d6cf}
+
+  /* ---- chips / badges ---- */
+  .chip{font-family:var(--mono);font-size:13px;font-weight:500;border:1px solid var(--ink);padding:8px 13px;letter-spacing:.04em}
+  .chip.fill{background:var(--ink);color:var(--paper);font-weight:700}
+  .chip.ghost{border-color:var(--line);color:var(--g2);background:var(--paper2)}
+  .bdg{font-family:var(--mono);font-size:13px;font-weight:700;border:1px solid var(--ink);
+    padding:3px 9px;letter-spacing:.05em;display:inline-block;white-space:nowrap}
+  .bdg.fill{background:var(--ink);color:var(--paper)}
+  .bdg.ghost{border-color:var(--line);color:var(--g2);font-weight:500}
+  .s.dark .bdg{border-color:var(--paper)}
+  .s.dark .bdg.fill{background:var(--paper);color:var(--ink)}
+
+  /* ---- comparison table ---- */
+  .cmp{width:100%;border-collapse:collapse;border:1px solid var(--line)}
+  .cmp th{font-family:var(--mono);font-size:13px;letter-spacing:.08em;font-weight:700;
+    text-transform:uppercase;color:var(--g2);text-align:left;padding:9px 14px;
+    border-bottom:1.5px solid var(--ink)}
+  .cmp td{font-size:14px;line-height:1.42;padding:10px 14px;border-bottom:1px solid var(--line);
+    word-break:keep-all;vertical-align:top}
+  .cmp tr:last-child td{border-bottom:none}
+  .cmp td.m{font-family:var(--mono);font-size:13px}
+  .cmp td.hl{background:var(--paper2);font-weight:700}
+  .cmp td.gone{color:var(--g3);text-decoration:line-through;text-decoration-color:var(--g3)}
+  .cmp tr.dim td{color:var(--g3)}
+  .cmp.tight td{padding:8px 13px;font-size:13.5px}
+  .cmp.tight th{padding:8px 13px}
+  .cmp.xt td{padding:5px 11px;font-size:13px;line-height:1.38}
+  .cmp.xt th{padding:6px 11px}
+
+  /* ---- card grids ---- */
+  .cards{display:grid;gap:18px}
+  .cards.c2{grid-template-columns:1fr 1fr}
+  .cards.c3{grid-template-columns:repeat(3,1fr)}
+  .cards.c4{grid-template-columns:repeat(4,1fr)}
+  .cards.c5{grid-template-columns:repeat(5,1fr)}
+  .card{border:1px solid var(--line);padding:20px 22px 18px;display:flex;flex-direction:column;word-break:keep-all}
+  .card .ck{font-family:var(--mono);font-size:13px;letter-spacing:.1em;font-weight:700;color:var(--g2);text-transform:uppercase}
+  .card h4{font-size:19px;font-weight:800;margin:9px 0 8px;letter-spacing:-.01em;line-height:1.25}
+  .card h4.sm{font-size:17px}
+  .card p{font-size:14px;line-height:1.5;color:#3a3a3a}
+  .card p b{font-weight:700;color:var(--ink)}
+  .card .foot{margin-top:auto;padding-top:12px}
+  .card.on{border-color:var(--ink);border-width:1.5px;background:var(--paper2)}
+  .s.dark .card{border-color:var(--line-dk)}
+  .s.dark .card p{color:#cbcac3}
+  .s.dark .card p b{color:var(--paper)}
+
+  /* ---- 2-up (before/after style) ---- */
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  .ba{border:1px solid var(--line);padding:26px 28px 22px;display:flex;flex-direction:column;word-break:keep-all}
+  .ba .tag{font-family:var(--mono);font-size:13px;letter-spacing:.18em;font-weight:700;color:var(--g2);
+    text-transform:uppercase;margin-bottom:16px}
+  .ba h3{font-size:21px;font-weight:800;line-height:1.3;margin-bottom:12px;letter-spacing:-.01em}
+  .ba p{font-size:14px;line-height:1.55;color:#3a3a3a}
+  .ba p b{font-weight:700;color:var(--ink)}
+  .ba.after{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .ba.after .tag{color:var(--g3)}
+  .ba.after p{color:#cbcac3}
+  .ba.after p b{color:var(--paper)}
+  /* A plain .ba sitting on a dark slide inherits .ba p b{color:var(--ink)} — near-black
+     on near-black. Re-point the ramp for both .ba variants on dark slides. */
+  .s.dark .ba p{color:#cbcac3}
+  .s.dark .ba p b{color:var(--paper)}
+  .s.dark .ba h3{color:var(--paper)}
+  /* .row inside an inverted card: the light-slide rule would paint it #3a3a3a on ink. */
+  .ba.after .row .rd,.s.dark .ba .row .rd{color:#cbcac3}
+  .ba.after .row .rk,.s.dark .ba .row .rk{color:#aaa9a1}
+  .ba.after .row .rd b,.s.dark .ba .row .rd b{color:var(--paper)}
+  .ba.after .row,.s.dark .ba .row{border-bottom-color:#4a4a4a}
+
+  /* ---- stat readout ---- */
+  .readout{display:flex;border:1px solid var(--line)}
+  .readout div{flex:1;padding:12px 18px;border-right:1px solid var(--line);text-align:center}
+  .readout div:last-child{border-right:none}
+  .readout .n{font-family:var(--mono);font-size:30px;font-weight:700;letter-spacing:-.02em}
+  .readout .l{font-family:var(--mono);font-size:13px;letter-spacing:.08em;color:var(--g2);text-transform:uppercase;margin-top:5px}
+  .s.dark .readout{border-color:var(--line-dk)}
+  .s.dark .readout div{border-right-color:var(--line-dk)}
+
+  /* ---- lists ---- */
+  .rows{display:flex;flex-direction:column;gap:11px}
+  .row{display:flex;gap:16px;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:11px;word-break:keep-all}
+  .row:last-child{border-bottom:none}
+  .row .rk{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--g2);flex-shrink:0;width:22px}
+  .row .rt{font-size:16px;font-weight:700;flex-shrink:0;width:250px;letter-spacing:-.01em}
+  .row .rd{font-size:14px;line-height:1.5;color:#3a3a3a}
+  .row .rd b{font-weight:700;color:var(--ink)}
+  .row.dimrow .rt{font-weight:500;color:var(--g2)}
+  .row.dimrow .rd{color:var(--g2)}
+  .row.dimrow .rd b{font-weight:700;color:var(--g2)}
+  .s.dark .row{border-bottom-color:var(--line-dk)}
+  .s.dark .row .rd{color:#cbcac3}
+  .s.dark .row .rd b{color:var(--paper)}
+
+  /* ---- cover ---- */
+  .cover .pad{display:flex;flex-direction:column;justify-content:flex-end}
+  .cover-ghost{position:absolute;right:-30px;top:-20px;width:700px;opacity:.10}
+  .cover h1{font-size:88px;line-height:.94;font-weight:800;letter-spacing:-.03em}
+  .cover h1 .hs{display:block;font-size:34px;font-weight:500;color:var(--g1);letter-spacing:-.01em;margin-top:18px}
+  .cover .lead{margin-top:28px;max-width:720px;font-size:19px;line-height:1.5;color:#2c2c2c;word-break:keep-all}
+  .cover-meta{margin-top:34px;display:flex;border-top:1px solid var(--line);padding-top:18px;width:100%;max-width:1020px}
+  .cover-meta div{flex:1;padding-right:26px;margin-right:26px;border-right:1px solid var(--line)}
+  .cover-meta div:last-child{border-right:none;padding-right:0;margin-right:0}
+  .cover-meta .k{font-family:var(--mono);font-size:13px;letter-spacing:.14em;color:var(--g2);text-transform:uppercase}
+  .cover-meta .v{font-size:15px;font-weight:600;margin-top:7px;line-height:1.4;word-break:keep-all}
+
+  /* ---- divider ---- */
+  .divider .pad{display:flex;flex-direction:column;justify-content:center}
+  .divider .dnum{font-family:var(--mono);font-size:120px;font-weight:800;line-height:.86;
+    letter-spacing:-.04em;color:var(--g1)}
+  .divider h2{font-size:54px;font-weight:800;letter-spacing:-.03em;line-height:1.02;margin-top:8px}
+  .divider .dsub{font-size:18px;color:var(--g3);margin-top:20px;max-width:700px;line-height:1.5;word-break:keep-all}
+
+  /* ---- star slide (the one number) ---- */
+  .star .pad{display:flex;flex-direction:row;align-items:center;gap:78px}
+  .star .big{font-family:var(--mono);font-size:340px;font-weight:800;line-height:.78;
+    letter-spacing:-.06em;color:var(--paper);flex-shrink:0}
+  .star .right{flex:1;min-width:0}
+  .star .steps{display:flex;align-items:center;gap:20px;font-family:var(--mono);font-size:19px;
+    font-weight:700;color:var(--g2);letter-spacing:.04em;margin-bottom:16px;flex-wrap:wrap}
+  .star .cap{font-size:44px;font-weight:800;letter-spacing:-.03em;line-height:1.18;word-break:keep-all}
+  .star .apps{display:flex;flex-direction:column;gap:10px;margin-top:30px;align-items:flex-start}
+
+  /* ---- closing ---- */
+  .close .pad{display:flex;flex-direction:column;justify-content:center}
+  .close h2{font-size:56px;font-weight:800;letter-spacing:-.03em;line-height:1.1;word-break:keep-all;max-width:1000px}
+  .close h2 .g{color:var(--g1)}
+  .asks{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:38px}
+  .ask{border-top:1.5px solid var(--paper);padding-top:14px;word-break:keep-all}
+  .ask .an{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.12em;color:var(--g3)}
+  .ask p{font-size:15px;line-height:1.5;margin-top:8px;color:var(--paper)}
+
+  /* ---- arch / svg holder ---- */
+  .arch-svg{width:100%}
+  .svgwrap{flex:1;display:flex;align-items:center;min-height:0}
+
+  /* ---- fragments ---- */
+  .frag{opacity:0;transform:translateY(6px);transition:opacity .3s ease, transform .3s ease}
+  .frag.revealed{opacity:1;transform:none}
+  @media (prefers-reduced-motion: reduce){ .frag{transition:opacity .18s ease;transform:none} }
+
+  /* ---- navigator ---- */
+  #navToggle{position:fixed;left:0;top:0;bottom:0;width:20px;z-index:41;cursor:pointer;border:none;
+    background:rgba(128,128,120,.10);color:#8a8a82;opacity:.6;
+    display:flex;align-items:center;justify-content:center;transition:opacity .2s,background .2s}
+  #navToggle:hover{opacity:1;background:rgba(128,128,120,.20)}
+  #navToggle .grip{writing-mode:vertical-rl;transform:rotate(180deg);font-family:var(--mono);
+    font-size:10px;font-weight:700;letter-spacing:.3em;text-transform:uppercase}
+  #navPanel{position:fixed;left:0;top:0;bottom:0;width:268px;z-index:42;background:var(--paper);
+    color:var(--ink);border-right:1px solid var(--line);display:flex;flex-direction:column;
+    transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);
+    box-shadow:0 0 44px rgba(0,0,0,.20)}
+  body.nav-open #navPanel{transform:none}
+  body.nav-open #navToggle{opacity:0;pointer-events:none}
+  body.nav-open .zone{pointer-events:none}
+  #navPanel .nav-hd{display:flex;align-items:baseline;justify-content:space-between;
+    padding:24px 20px 15px;border-bottom:1px solid var(--line)}
+  #navPanel .nav-hd .t{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--ink)}
+  #navPanel .nav-hd .c{font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--g2)}
+  #navList{flex:1;overflow-y:auto;padding:16px 16px 24px;display:flex;flex-direction:column;gap:13px}
+  .nav-item{display:block;width:100%;text-align:left;padding:0;border:none;background:none;cursor:pointer}
+  .nav-item .nav-row{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+  .nav-item .nav-num{font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.1em;color:var(--g2)}
+  .nav-item .nav-name{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.12em;
+    color:var(--g3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nav-thumb{position:relative;overflow:hidden;border:1px solid var(--line);background:var(--paper);
+    pointer-events:none;transition:box-shadow .15s,border-color .15s}
+  .nav-thumb-inner{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;pointer-events:none}
+  .nav-thumb-inner *{animation:none!important}
+  .nav-item:hover .nav-thumb{border-color:var(--g2)}
+  .nav-item.active .nav-thumb{border-color:var(--ink);box-shadow:0 0 0 2px var(--ink)}
+  .nav-item.active .nav-num{color:var(--ink)}
+  .nav-item.active .nav-name{color:var(--g2)}
+
+  /* ---- presenter ---- */
+  #presenter{position:fixed;inset:0;z-index:60;background:#0b0b0b;color:#e9e8e2;
+    display:none;flex-direction:column;padding:34px 44px 40px;font-family:var(--sans)}
+  body.pv-open #presenter{display:flex}
+  #presenter .pv-top{display:flex;align-items:center;gap:22px;border-bottom:1px solid #333;
+    padding-bottom:18px;margin-bottom:26px}
+  #presenter .pv-timer{font-family:var(--mono);font-size:40px;font-weight:700;letter-spacing:.02em}
+  #presenter .pv-page{font-family:var(--mono);font-size:15px;letter-spacing:.14em;color:#9c9b93;margin-left:auto}
+  #presenter .pv-reset{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.12em;
+    text-transform:uppercase;color:#9c9b93;background:none;border:1px solid #3a3a3a;padding:7px 12px;cursor:pointer}
+  #presenter .pv-reset:hover{color:#e9e8e2;border-color:#666}
+  #presenter .pv-body{flex:1;display:grid;grid-template-columns:1.35fr 1fr;gap:44px;min-height:0}
+  #presenter .pv-col{display:flex;flex-direction:column;min-height:0}
+  #presenter .pv-lab{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.2em;
+    text-transform:uppercase;color:#7f7e76;margin-bottom:16px}
+  #presenter .pv-notes{font-size:21px;line-height:1.62;color:#ecebe5;overflow-y:auto;
+    word-break:keep-all;white-space:pre-wrap}
+  #presenter .pv-notes.empty{color:#6b6a63;font-style:italic}
+  #presenter .pv-thumb{position:relative;overflow:hidden;border:1px solid #3a3a3a;background:#000;flex-shrink:0}
+  #presenter .pv-thumb-inner{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0}
+  #presenter .pv-thumb-inner *{animation:none!important}
+  #presenter .pv-next-notes{font-size:14px;line-height:1.55;color:#9c9b93;margin-top:16px;
+    word-break:keep-all;white-space:pre-wrap;overflow-y:auto}
+  #presenter .pv-hint{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;color:#5f5e57;
+    margin-top:18px;text-align:right}
+
+  @media (prefers-reduced-motion: reduce){ .s{transition:opacity .2s ease;transform:none} #navPanel{transition:none} }
+
+  /* ---- multi-platform deck additions ---- */
+  .cover h1{max-width:940px}
+  .cover h1 .hs{max-width:900px}
+  .cmp.xt td,.cmp.xt th{vertical-align:middle}
+  .ba .rows{margin-top:6px}
+  .ba .row .rt{width:170px}
+  .ba .row .rd{font-size:13.5px}
+
+</style>
+</head>
+<body>
+<div id="scaler">
+<div class="stage">
+<section class="s light cover active" data-foot="OPENING">
+<svg class="cover-ghost" fill="none" stroke="#0d0d0d" stroke-width="1.4" viewbox="0 0 760 520">
+<rect height="54" rx="3" width="150" x="40" y="44"></rect><rect height="54" rx="3" width="150" x="218" y="44"></rect>
+<rect height="54" rx="3" width="150" x="396" y="44"></rect><rect height="54" rx="3" width="150" x="574" y="44"></rect>
+<path d="M115 98V162M293 98V162M471 98V162M649 98V162"></path>
+<rect height="72" rx="3" width="540" x="120" y="162"></rect>
+<path d="M390 234V300"></path><rect height="92" rx="3" width="292" x="244" y="300"></rect>
+<path d="M338 327 L425 346 L338 365 Z"></path>
+<path d="M390 392V460"></path><rect height="42" rx="3" width="180" x="300" y="460"></rect>
+</svg>
+<div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">Live OTT · Player Enablement</span></div>
+<h1>Multi-Platform<br/>Player 개발·검증<span class="hs">다양한 Device/OS에서 실제 재생 가능한 Player를 만든다</span></h1>
+<p class="lead">App 개발팀과 Player 개발·개발환경구축팀이 같은 Target Matrix를 공유한다. 1단계에서 실제 재생 가능한 Player와 검증 기반을 만들고, 그 결과를 2단계 전체 서비스 통합으로 넘긴다.</p>
+<div class="cover-meta">
+<div><div class="k">기준 시점</div><div class="v">2026-08</div></div>
+<div><div class="k">Target</div><div class="v">21 device / OS 항목</div></div>
+<div><div class="k">Player</div><div class="v">3 실행 계열 Adapter 가설 + Flutter facade</div></div>
+<div><div class="k">현재 범위</div><div class="v">1단계 · Player 기술 검증</div></div>
+</div>
+</div>
+</section>
+<section class="s light c" data-foot="01 · 2단계 구조">
+<div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">01 · Two-stage Delivery</span></div>
+<h2 class="ttl">전체 흐름은 2단계다 — 기술적으로 성립시키고, 그 다음 서비스로 출시한다</h2>
+<div class="two grow" style="align-content:center">
+<div class="ba after">
+<div class="tag">STEP 1 · CURRENT PROJECT</div>
+<h3>Player 개발 + 개발환경 구축 + 기술 검증</h3>
+<p>Target별 Player를 구현하고 <b>Build → Deploy → Debug → 실제 Stream/DRM 재생</b>까지 성립시킨다.</p>
+<p style="margin-top:12px">일반적인 “되면 좋고 아니면 말고” PoC가 아니다. <b>실제 서비스에 가져갈 Player가 되어야 하며</b>, 문제가 있으면 구현 방식·버전·Adapter·지원 하한을 조정해 기술적 해법을 만든다.</p>
+<p style="margin-top:12px"><b>결과:</b> Player 구현 · 개발/검증 환경 · Target별 지원조건/제약 · 검증 Evidence</p>
+</div>
+<div class="ba">
+<div class="tag">STEP 2 · SERVICE RELEASE</div>
+<h3>전체 서비스 통합 + 상용 검증 + 배포</h3>
+<p>1단계에서 검증된 Player를 <b>실제 App·BFF/SDUI·인증·CDN·Production DRM·Analytics</b>와 통합한다.</p>
+<p style="margin-top:12px">E2E/회귀/장시간/네트워크/실제 콘텐츠 검증을 수행하고, 플랫폼별 <b>Certification · Store/Publisher · Commercial Release</b> 절차를 거친다.</p>
+<p style="margin-top:12px"><b>결과:</b> 상용 서비스 App · 플랫폼 인증 · Store/서비스 배포 · 운영체계</p>
+</div>
+</div>
+<div class="band"><b>두 단계의 경계가 중요하다.</b> 1단계는 출시 검증이 아니지만 prototype 품질도 아니다. <b>2단계에서 버리지 않고 그대로 통합할 Player와 검증 기반을 만드는 단계</b>다.</div>
+</div>
+</section>
+<section class="s light c" data-foot="02 · Player Contract">
+<div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">02 · Architecture Hypothesis</span></div>
+<h2 class="ttl sm wsub">공통 Player Contract는 “하나의 인터페이스 코드”가 아니라 언어 중립 재생 계약이다</h2>
+<p class="sub" style="margin-bottom:12px">기존 PlayerAdapter 패턴을 멀티플랫폼으로 확장하는 설계 가설. 공통 의미를 먼저 정의하고 각 실행 계열이 자기 언어와 실제 Player로 구현한다.</p>
+<div class="ba" style="padding:11px 18px 10px;margin-bottom:12px">
+<div class="tag" style="margin-bottom:8px">PLAYER CONTRACT SPEC · LANGUAGE-NEUTRAL</div>
+<p style="font-family:var(--mono);font-size:12.5px;line-height:1.45"><b>Command</b> load · play · pause · seek · stop   /   <b>State</b> idle · loading · ready · playing · paused · ended · error<br/><b>Event</b> stateChanged · trackChanged   /   <b>Error</b> source · drm · decode · network · unsupported   /   <b>Capability</b> offline · PiP · DASH · DVR · lowLatency …</p>
+</div>
+<div class="cards c3" style="align-content:stretch">
+<div class="card on" style="padding:16px 18px 14px">
+<div class="ck">ANDROID EXECUTION FAMILY</div><h4 class="sm">Kotlin Interface → Android PlayerAdapter</h4>
+<p>같은 Contract를 Kotlin으로 구현하고 <b>Media3 / ExoPlayer</b>에 연결. STB 내부는 MW·TIS·mABR·unicast로 추가 분기 가능.</p>
+</div>
+<div class="card on" style="padding:16px 18px 14px">
+<div class="ck">APPLE EXECUTION FAMILY</div><h4 class="sm">Swift Protocol → Apple PlayerAdapter</h4>
+<p>동일한 계약을 Swift로 구현하고 <b>AVPlayer / AVFoundation</b>에 연결. iOS·tvOS의 공통화 범위를 검증한다.</p>
+</div>
+<div class="card on" style="padding:16px 18px 14px">
+<div class="ck">WEB EXECUTION FAMILY</div><h4 class="sm">TypeScript Interface → Web PlayerAdapter</h4>
+<p>동일한 계약을 TypeScript로 구현하고 <b>Shaka / MSE / EME</b>에 연결. Browser·SmartTV·Console 호환 경계를 검증한다.</p>
+</div>
+</div>
+<div class="band" style="font-size:13.5px"><b>공유하는 것은 소스코드가 아니라 계약의 의미·데이터 모델·검증 기준이다.</b> 1단계에서 세 실행 계열을 <b>Conformance Test</b>로 검증하고 Contract/Adapter 경계를 조정한다. Flutter는 네 번째 Player가 아니라 Android/Apple Adapter를 호출하는 <b>Facade/Bridge 후보</b>다.</div>
+</div>
+</section>
+<section class="s light c" data-foot="03 · 공동 기준선">
+<div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">03 · App × Player Co-work</span></div>
+<h2 class="ttl sm wsub">같은 Target Matrix를 두 팀이 다른 목적에서 읽고, 지원조건은 함께 닫는다</h2>
+<p class="sub">App팀의 Device List는 21개 요구항목을 실제 기기·OS·조달 단위로 세분화한 기준선이다. Player팀은 같은 Target을 재생 실행계열·DRM·Runtime·검증환경 관점에서 다시 본다.</p>
+<div class="two grow" style="align-content:center">
+<div class="ba">
+<div class="tag">APP DEVELOPMENT VIEW</div>
+<h3>서비스 앱이 실제 Target에서 동작하는가</h3>
+<p><b>Device / OS / App stack·flavor</b><br/>지원 하한 · UI/입력 · package/host · lifecycle · 기기 확보·조달 · SDK/스토어 접근</p>
+<p style="margin-top:12px">첨부 Matrix가 특히 강한 부분 — <b>실기 확보 가능성, OS 하한 재현 가능성, 수량·입수방법, Partner/DevKit 선행조건</b></p>
+</div>
+<div class="ba after">
+<div class="tag">MULTI-PLATFORM PLAYER VIEW</div>
+<h3>같은 Target에서 재생이 기술적으로 성립하는가</h3>
+<p><b>Player execution family / actual player</b><br/>DRM·CAS · protocol/codec · HW decode · Legacy Runtime · 개발/검증 환경 · Contract conformance</p>
+<p style="margin-top:12px">Player팀의 핵심 — <b>실제 Stream/DRM 재생 Evidence</b>와 공통 Contract/Adapter가 유지되는 경계</p>
+</div>
+</div>
+<div class="band"><b>완전히 분리된 R&amp;R이 아니라 초점이 다르다.</b> Target 범위 · 지원 하한 · 실기기/DevKit · 플랫폼 Bridge/Host · 출시 전제는 공동 입력이다. <b>공통 Target Matrix를 하나의 정본</b>으로 두고 양 팀이 필요한 열을 채우는 방식이 적절하다.</div>
+</div>
+</section>
+<section class="s light c" data-foot="04 · Player / DRM">
+<div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">04 · Player × DRM</span></div>
+<h2 class="ttl sm">재생 엔진과 DRM은 플랫폼이 사실상 고정한다</h2>
+<table class="cmp tight grow" style="align-self:start">
+<tr><th style="width:190px">구분</th><th style="width:280px">Android · 51</th><th style="width:260px">Apple · 52</th><th>Web / TV / Console · 54</th></tr>
+<tr><td class="hl">Player</td><td><b>Media3 / ExoPlayer</b></td><td><b>AVPlayer</b></td><td><b>Shaka Player / EME</b></td></tr>
+<tr><td class="hl">DRM</td><td>Widevine L1 / L3</td><td>FairPlay</td><td>Widevine · PlayReady</td></tr>
+<tr><td class="hl">Protocol</td><td>HLS · DASH · CMAF<br/>STB F1은 MPEG-2 TS</td><td>HLS · CMAF</td><td>HLS · DASH · CMAF</td></tr>
+<tr><td class="hl">특수 경로</td><td>STB: DTT · MediaCas / CAS · mABR</td><td>모바일: persistent key / offline</td><td>Console: 플랫폼별 DRM·Host 검증</td></tr>
+</table>
+<div class="band"><b>크로스플랫폼 프레임워크가 재생층을 통일해 주지는 않는다.</b> 공통화 대상은 <b>언어 중립 Player Contract Specification + 데이터 모델 + Conformance Test</b>이고, 실제 interface/protocol/type과 엔진·DRM은 실행 계열별 구현으로 남는다.</div>
+</div>
+</section>
+<section class="s light c" data-foot="05 · 지원 하한 / 검증 기준">
+<div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">05 · Support Floor &amp; Verification</span></div>
+<h2 class="ttl sm wsub">“지원 하한”은 하나가 아니다 — Build · 재현 가능한 검증 · 서비스 지원을 구분한다</h2>
+<p class="sub">App팀 Matrix가 드러낸 핵심이다. RFQ에 적힌 최소 OS가 빌드되더라도 현재 Toolchain이나 실기에서 재현하지 못하면 Player팀은 그 버전을 검증 완료로 선언할 수 없다.</p>
+<div class="cards c3 grow" style="align-content:center">
+<div class="card"><div class="ck">01 · BUILD FLOOR</div><h4>코드가 빌드되는 하한</h4><p>예: Fire OS 5가 <b>API 22</b>를 요구하면 Kotlin build/minSdk 하한에는 영향을 줄 수 있다. 하지만 이것만으로 서비스 지원을 의미하지 않는다.</p></div>
+<div class="card on"><div class="ck">02 · VALIDATION FLOOR</div><h4>실제로 재현·검증 가능한 하한</h4><p>예: App팀 자료는 Android TV 7·Android 7 고착 실기 확보가 어렵고, iOS 14/tvOS 12는 현 툴체인에서 재현 검증이 어렵다고 본다. <b>검증 Evidence가 가능한 지점</b>을 따로 잡아야 한다.</p></div>
+<div class="card"><div class="ck">03 · SERVICE FLOOR</div><h4>최종적으로 약속할 지원 하한</h4><p>App Runtime/UI + Player/DRM/Codec + 실제 기기 검증을 모두 통과한 뒤 확정한다. 필요하면 RFQ 하한을 TIM과 재협의한다.</p></div>
+</div>
+<div class="band"><b>플랫폼마다 하한을 닫는 방법도 다르다.</b> Tizen/webOS는 구형 TV의 OS가 고정돼 실기로 하한을 재현하기 쉽지만, Android/Apple은 OS 업데이트·서명/Toolchain 때문에 과거 버전 재현이 어려울 수 있다. <b>지원 선언은 App과 Player 양쪽 Evidence가 있어야 한다.</b></div>
+</div>
+</section>
+<section class="s light c" data-foot="06 · Android / Fire 환경">
+<div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">06 · Android &amp; Fire Family</span></div>
+<h2 class="ttl sm">기존 STB 강점을 기준선으로 쓰되, Retail·Fire·Vega는 같은 범위라고 가정하지 않는다</h2>
+<div class="cards c3 grow" style="align-content:center">
+<div class="card"><div class="ck">REFERENCE · OPERATOR STB</div><h4 class="sm">팀의 기준 자산</h4><p>6종 STB에서 OEMCrypto · MediaCas · TIF/TIS · Tuner HAL · SoC/GPU · MW 범위를 확보한다. <b>F1 DTT/CAS · F2 mABR · F3 IP</b>가 이번 확장의 기준선이다.</p></div>
+<div class="card on"><div class="ck">ANDROID / FIRE OS</div><h4 class="sm">51 재사용 범위 검증</h4><p>Retail Android TV와 Fire OS는 Android Studio/ADB 기반으로 접근 가능하나 세대·API·Widevine L1/L3·HEVC HW decode가 다르다. App팀은 <b>Fire OS 5가 API 22 build 하한</b>을 정할 가능성을 제시한다.</p></div>
+<div class="card"><div class="ck">SCOPE GATE · VEGA OS</div><h4 class="sm">Fire Stick 이름만 보고 Android로 묶지 않는다</h4><p>App팀 Matrix는 Vega OS를 <b>Linux 기반 자체 OS·React Native 계열</b>로 분리하고 범위 미정으로 둔다. 포함되면 기존 61/Kotlin 범위를 벗어나므로 <b>App stack과 Player runtime을 모두 재판정</b>해야 한다.</p></div>
+</div>
+<div class="band"><b>공동 체크:</b> Retail Android TV 7/Android 7은 빌드는 가능해도 하한 실기 확보가 어렵다는 App팀 분석이 있다. Player팀은 <b>API 하한과 “검증 가능한 서비스 하한”을 분리</b>해 실기 결과를 제공한다.</div>
+</div>
+</section>
+<section class="s light c" data-foot="07 · Mobile / Apple">
+<div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">07 · Mobile &amp; Apple</span></div>
+<h2 class="ttl sm">모바일·tvOS는 Player 재사용과 “과거 OS를 실제로 검증할 수 있는가”를 함께 본다</h2>
+<div class="cards c3 grow" style="align-content:center">
+<div class="card"><div class="ck">ANDROID MOBILE</div><h4>62 → 53 → 51</h4><p>Widevine · offline license · lifecycle/PiP/background를 실기에서 검증한다. App팀은 Android 7 고착 실기 확보가 어렵다고 보고 <b>검증 하한 8 제안</b>을 TIM 협의안으로 둔다.</p></div>
+<div class="card on"><div class="ck">IOS / IPADOS</div><h4>62 → 53 → 52</h4><p>AVPlayer · FairPlay · persistent key를 검증한다. App팀 Matrix는 RFQ iOS 14와 달리 <b>현 Toolchain에서 실질 검증 하한을 iOS 15</b>로 제안한다.</p></div>
+<div class="card"><div class="ck">TVOS</div><h4>64 → 52 재사용</h4><p>5차 핵심은 새 Player보다 <b>52의 tvOS 재사용 가능성</b>이다. Apple TV HD는 하드웨어 하한 확인에는 유효하지만 App팀 분석상 tvOS 12 재현 검증 수단은 되지 않는다.</p></div>
+</div>
+<div class="band"><b>App과 Player가 같이 닫을 결정:</b> 지원 OS 하한은 “deployment target 설정 가능”만으로 확정하지 않는다. <b>실제 연결·실행·DRM 재생 Evidence가 가능한 버전</b>과 시장/필드 요구를 함께 보고 확정한다.</div>
+</div>
+</section>
+<section class="s light c" data-foot="08 · Web / SmartTV">
+<div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">08 · Web Runtime</span></div>
+<h2 class="ttl sm">SmartTV는 제조사별 Runtime뿐 아니라 “구형 실기 확보”와 “현행 SDK가 그 하한을 받아주는가”를 분리한다</h2>
+<table class="cmp xt grow" style="align-self:start">
+<tr><th style="width:145px">환경</th><th style="width:215px">App팀 Matrix 입력</th><th style="width:330px">Player팀 확인</th><th>공동 판단</th></tr>
+<tr><td class="hl"><b>Windows Web</b></td><td>Chrome · Edge · Firefox / Win10·11</td><td>EME · DRM · 최대 화질 · 54 baseline</td><td>App팀은 일부 Win10 표기의 지원종료 문제를 협의사항으로 둠</td></tr>
+<tr><td class="hl"><b>Tizen 3+</b></td><td>2017 구형 실기 확보 가능</td><td>MSE/EME · DRM · Web engine · 실제 Player Probe</td><td><b>현 Tizen SDK/Store가 v3 target을 받는지</b> 확인 후 하한 확정</td></tr>
+<tr><td class="hl"><b>webOS 4+</b></td><td>2018 구형 실기 확보 가능</td><td>Chromium 세대 · DRM · codec · 장시간 안정성</td><td><b>현 SDK의 v4 target 지원</b>과 실기 결과를 함께 확인</td></tr>
+<tr><td class="hl"><b>VIDAA U4+</b></td><td>유럽 현지 조달 · Partner 접근 필요 · WebGL 리스크</td><td>Runtime/DRM/codec · 54/renderer 요구와 충돌 여부</td><td>접근 후 유지/제외 판단</td></tr>
+<tr><td class="hl"><b>Titan OS</b></td><td>유럽 현지 · 버전 하한 정의부터 필요</td><td>Runtime/DRM/HW · SDK/DevView 실제 접근</td><td>플랫폼 version/배포 경로와 기술 하한을 함께 정의</td></tr>
+</table>
+<div class="band"><b>Tizen/webOS의 중요한 장점은 OS가 구형 실기에 고정된다는 점</b>이다. 반대로 실기가 있어도 <b>현행 SDK·인증/배포 도구가 그 세대를 지원하는지는 별개의 Gate</b>다. App팀 Matrix의 조달 정보와 Player팀 Legacy Probe를 결합해야 하한을 닫을 수 있다.</div>
+</div>
+</section>
+<section class="s light c" data-foot="09 · Legacy Runtime Gate">
+<div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">09 · Legacy Runtime Gate</span></div>
+<h2 class="ttl sm">오래된 SmartTV Runtime이 54.player-js의 실제 지원 하한을 결정한다</h2>
+<div class="two grow" style="grid-template-columns:1.08fr .92fr;gap:20px">
+<div class="ba">
+<div class="tag">왜 별도 Gate가 필요한가</div>
+<div class="rows" style="gap:9px">
+<div class="row"><span class="rk">1</span><span class="rt" style="width:150px">JS / Web Engine</span><span class="rd">예: <b>webOS 4.x는 Chromium 53</b>. 최신 문법·API는 transpile/polyfill로 일부 대응 가능하지만 Runtime 차이는 남는다.</span></div>
+<div class="row"><span class="rk">2</span><span class="rt" style="width:150px">MSE / EME / DRM</span><span class="rd"><b>polyfill로 해결할 수 없는 영역.</b> JavaScript 실행 성공과 실제 DRM 영상 재생 성공은 별개다.</span></div>
+<div class="row"><span class="rk">3</span><span class="rt" style="width:150px">Player Version</span><span class="rd">Shaka는 MSE/EME에 의존하고, <b>구형 TV/STB의 MediaSource 제약이 HLS 지원에 직접 영향</b>을 줄 수 있다.</span></div>
+<div class="row"><span class="rk">4</span><span class="rt" style="width:150px">HW / Performance</span><span class="rd">CPU·RAM·decoder 성능이 낮아 UI·GC·DRM·영상 재생이 동시에 돌 때 병목이 발생할 수 있다.</span></div>
+</div>
+</div>
+<div class="ba after">
+<div class="tag">Compatibility Probe · oldest target first</div>
+<h3 style="margin-bottom:14px">“지원”은 단계별 증거로 만든다</h3>
+<div class="rows" style="gap:8px">
+<div class="row"><span class="rk">01</span><span class="rd"><b>JS capability</b> — bundle 실행 · 필수 API</span></div>
+<div class="row"><span class="rk">02</span><span class="rd"><b>MSE</b> — codec/source buffer</span></div>
+<div class="row"><span class="rk">03</span><span class="rd"><b>Clear stream</b> — HLS / DASH / CMAF</span></div>
+<div class="row"><span class="rk">04</span><span class="rd"><b>EME / Key System</b> — Widevine / PlayReady</span></div>
+<div class="row"><span class="rk">05</span><span class="rd"><b>Encrypted playback</b> — 실제 DRM 재생</span></div>
+<div class="row"><span class="rk">06</span><span class="rd"><b>Service profile</b> — 화질 · codec · startup · 장시간 안정성</span></div>
+</div>
+<p style="margin-top:12px;font-size:13px;color:#aaa9a1">우선 후보: Tizen 3 · webOS 4 · VIDAA U4 · PS4 — 정확한 경계는 실기 결과로 확정</p>
+</div>
+</div>
+<div class="band"><b>54의 첫 번째 PoC는 기능 구현이 아니라 호환성 경계 찾기다.</b> 최신 기기에서 되는지를 확인한 뒤 구형으로 내려가는 방식보다, <b>지원 하한 후보에서 먼저 Player Probe를 실행</b>해 하나의 구현으로 커버 가능한 범위를 정한다.</div>
+<div class="note">근거: Samsung Smart TV / LG webOS Developer / Shaka Player 공식 문서 · 2026-08 확인</div>
+</div>
+</section>
+<section class="s light c" data-foot="10 · Console">
+<div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">10 · Console</span></div>
+<h2 class="ttl">Console은 “일반 Web”이 아니라 Shared Web Player + Platform-specific 실행환경이다</h2>
+<div class="two grow" style="align-content:center">
+<div class="ba">
+<div class="tag">Xbox One / Series</div>
+<h3>54 + Xbox Host</h3>
+<p>TypeScript / Shaka 기반 Player 코어를 활용하되 Xbox 패키징·런타임·게임패드·lifecycle·PlayReady 경로를 별도로 검증한다.</p>
+<p style="margin-top:12px"><b>핵심 검증</b> — PlayReady, DASH/CMAF 재생, 실제 콘솔 성능과 배포 경로.</p>
+</div>
+<div class="ba after">
+<div class="tag">PS4 / PS5</div>
+<h3>54 + PlayStation Partner 환경</h3>
+<p>일반 브라우저 배포가 아니라 Partner SDK·DevKit 접근이 선행된다. 54 재사용 범위와 플랫폼 Media/DRM 경로를 실기에서 확인한다.</p>
+<p style="margin-top:12px"><b>핵심 검증</b> — PS4/PS5 각각의 DRM·runtime·성능 차이와 PS5 DRM 선택.</p>
+</div>
+</div>
+<div class="band"><b>4차의 환경 리스크는 코드보다 접근권한과 실기기다.</b> Console은 Partner onboarding과 DevKit 확보가 늦어지면 Player 검증 자체가 시작되지 않는다.</div>
+</div>
+</section>
+<section class="s light c" data-foot="11 · 공동 Dependency / Device Lab">
+<div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">11 · Shared Dependency &amp; Device Lab</span></div>
+<h2 class="ttl sm">App팀의 조달·접근 Matrix는 Player 검증환경의 선행 입력이다</h2>
+<table class="cmp xt grow" style="align-self:start">
+<tr><th style="width:155px">유형</th><th style="width:250px">App팀 Matrix에서 확인된 조건</th><th style="width:315px">Player 개발·검증에 필요한 입력</th><th>Co-work 포인트</th></tr>
+<tr><td class="hl"><b>Operator / OEM</b></td><td>STB는 TIM을 통해 확보 · MW 범위 확인</td><td>OEMCrypto · MediaCas · TIF/TIS · Tuner HAL · 실기 STB</td><td>App 통합과 Player 재생 검증이 같은 기기/사양을 공유</td></tr>
+<tr><td class="hl"><b>Retail / Fire</b></td><td>국내 구매·해외 직구 · 구형 세대 중고 포함</td><td>Widevine/codec 진단 · API/OS 세대 · ADB/Test Harness</td><td>구매 모델을 <b>검증 하한 후보</b>에 맞춰 선정</td></tr>
+<tr><td class="hl"><b>SmartTV</b></td><td>Tizen/webOS 국내 · VIDAA/Titan 유럽 현지</td><td>oldest target 실기 · SDK/debug · DRM stream</td><td>기기 조달과 SDK/Partner 접근을 동시에 준비</td></tr>
+<tr><td class="hl"><b>PlayStation</b></td><td>retail 기기만으로 앱 배포 불가 · DevKit/Partner 선행</td><td>Partner SDK · DevKit · DRM/runtime 검증환경</td><td><b>4차 직전이 아니라 선행 착수</b>가 필요</td></tr>
+<tr><td class="hl"><b>Xbox</b></td><td>Retail Developer Mode 가능 · 세대별 차이 확인</td><td>One/Series host·PlayReady·성능 · 필요 시 4K 검증 기기</td><td>패키징 shell/세대 공통화 여부를 함께 확인</td></tr>
+</table>
+<div class="band"><b>1단계 접근권한과 2단계 상용 배포 권한은 구분</b>하되, 1단계 Player 검증을 막는 SDK·Partner·DevKit·실기기·Test DRM은 지금부터 관리한다. App팀은 조달/앱 실행 조건을, Player팀은 <b>어떤 기기·세대가 기술검증에 필요한지</b> 입력한다.</div>
+</div>
+</section>
+<section class="s light c" data-foot="12 · 1단계 검증 루프">
+<div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">12 · Step 1 Validation Loop</span></div>
+<h2 class="ttl">1단계 개발환경은 Player 기술 검증 루프를 반복할 수 있게 만드는 기반이다</h2>
+<div class="readout" style="margin-top:18px">
+<div><div class="n">1</div><div class="l">Target</div></div>
+<div><div class="n">2</div><div class="l">Toolchain</div></div>
+<div><div class="n">3</div><div class="l">Build</div></div>
+<div><div class="n">4</div><div class="l">Deploy</div></div>
+<div><div class="n">5</div><div class="l">Stream</div></div>
+<div><div class="n">6</div><div class="l">DRM</div></div>
+<div><div class="n">7</div><div class="l">Playback</div></div>
+<div><div class="n">8</div><div class="l">Evidence</div></div>
+</div>
+<div class="rows grow" style="margin-top:26px;align-content:center">
+<div class="row"><span class="rk">A</span><span class="rt">환경 준비</span><span class="rd">OS/IDE/SDK 버전, 계정·인증서·Partner 권한, Emulator/Simulator, 실기기 연결과 로그 수집 경로.</span></div>
+<div class="row"><span class="rk">B</span><span class="rt">Player Sample</span><span class="rd">복잡한 App 전체가 아니라 Player를 독립 검증할 최소 Sample/Test Harness를 Target별로 실행한다.</span></div>
+<div class="row"><span class="rk">C</span><span class="rt">재생 검증</span><span class="rd">동일 테스트 스트림과 DRM 계정으로 성공/실패·성능·제약을 기록한다.</span></div>
+<div class="row"><span class="rk">D</span><span class="rt">회귀 가능성</span><span class="rd">SDK·OS·기기 세대가 바뀌어도 같은 절차와 Test Case로 다시 확인할 수 있어야 한다.</span></div>
+</div>
+</div>
+</section>
+<section class="s light c" data-foot="13 · 1단계 내부 차수">
+<div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">13 · Step 1 · Phase Readiness</span></div>
+<h2 class="ttl sm">1~5차 Player 검증은 App팀 Target/조달 Matrix와 같은 시점표를 써야 한다</h2>
+<table class="cmp xt grow" style="align-self:start">
+<tr><th style="width:52px">차수</th><th style="width:230px">Target / Player</th><th style="width:365px">App팀 Matrix에서 넘어오는 선행 입력</th><th>Player 검증 Gate</th></tr>
+<tr><td class="m hl">1</td><td>STB 6종 + Retail Android / Fire · 51</td><td>STB 실기/MW 사양 · Fire OS 5/7/8 · Retail Android 하한 후보 · <b>Vega 범위 판정</b></td><td>DTT + mABR + IP DRM · build floor와 검증 floor 분리</td></tr>
+<tr><td class="m hl">2</td><td>Android/iOS mobile · 51/52/53</td><td>Android 7·iOS 14 RFQ 하한의 <b>재현 가능성 재협의</b> · 모바일/태블릿 실기</td><td>DRM + offline · lifecycle · 검증 가능한 OS 하한</td></tr>
+<tr><td class="m">3</td><td>Windows Web · 54</td><td>Win10/11 지원범위 · Chrome/Edge/Firefox 버전</td><td>3 Browser 재생 · DRM/화질 · 지원종료 OS 정책 입력</td></tr>
+<tr><td class="m">4</td><td>SmartTV 4 + Console 4 · 54 확장</td><td>Tizen3/webOS4 구형 실기 · VIDAA/Titan Partner · PS DevKit · Xbox 세대/Store 조건</td><td><b>Legacy Runtime Gate</b> + DRM + Host/성능 실기 검증</td></tr>
+<tr><td class="m">5</td><td>Apple TV · 52 재사용</td><td>tvOS 12 RFQ vs 현 Toolchain 검증 하한 · Apple TV HD/4K 실기</td><td>52 재사용 · FairPlay · 실제 검증 가능 하한 확정</td></tr>
+</table>
+<div class="band"><b>차수는 Player 코드 일정만이 아니다.</b> 각 차수 착수 전에 App팀의 <b>Target 범위·하한·실기 확보·Partner 접근</b>과 Player팀의 <b>재생환경·DRM·Test Harness</b>가 동시에 준비되어야 한다.</div>
+</div>
+</section>
+<section class="s light c" data-foot="14 · 공동 체크포인트 / Handoff">
+<div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">14 · Joint Checkpoints &amp; Handoff</span></div>
+<h2 class="ttl sm">두 팀이 따로 닫을 수 없는 항목을 공통 Matrix에서 상태로 관리한다</h2>
+<div class="rows grow" style="align-content:center">
+<div class="row"><span class="rk">01</span><span class="rt">Target Matrix 정본</span><span class="rd">App팀의 Device/OS/조달 정보를 기준선으로 두고 Player execution family · DRM · runtime · 검증상태 열을 추가한다. <b>21 요구항목과 실제 세분 행의 관계</b>를 유지한다.</span></div>
+<div class="row"><span class="rk">02</span><span class="rt">지원 하한 3축</span><span class="rd"><b>Build floor / Validation floor / Service floor</b>를 구분한다. Android·Apple처럼 과거 OS 재현이 어려운 플랫폼과 Tizen/webOS처럼 구형 실기로 닫을 수 있는 플랫폼을 다르게 관리한다.</span></div>
+<div class="row"><span class="rk">03</span><span class="rt">Vega OS 범위</span><span class="rd">Fire Stick 명칭만으로 Android에 포함하지 않는다. 범위에 들어오면 App stack과 Player runtime/Adapter를 모두 다시 평가한다.</span></div>
+<div class="row"><span class="rk">04</span><span class="rt">Legacy / SDK Gate</span><span class="rd">Tizen3 · webOS4 · VIDAA U4 · PS4 등 하한 후보에서 Player Probe를 수행하고, <b>현 SDK·Store/Partner 환경이 해당 Target을 실제로 받을 수 있는지</b> App과 함께 확인한다.</span></div>
+<div class="row"><span class="rk">05</span><span class="rt">Device Lab 정합성</span><span class="rd">첨부 파일은 <b>Device List 필요수량 합계 58</b>과 <b>집계 총계 28</b>이 일치하지 않는다(STB 본표 4대/종 vs 집계 2대/종 등). 구매 전 기준을 하나로 맞춘다.</span></div>
+<div class="row"><span class="rk">06</span><span class="rt">Player Contract v1</span><span class="rd">Android/Apple/Web 실행계열이 동일 Command·State·Event·Error·Capability 의미를 만족하는지 Conformance Test로 검증한다.</span></div>
+<div class="row"><span class="rk">07</span><span class="rt">1단계 → 2단계</span><span class="rd">검증 Player · 지원 하한/제약 · Target/Device Matrix · 환경 manifest · Test Harness · Evidence를 <b>전체 App 서비스 통합</b>의 입력으로 넘긴다.</span></div>
+</div>
+<div class="band"><b>Co-work의 핵심은 hand-off가 아니라 공동 판정</b>이다. App이 실행된다고 Player 지원이 확정되는 것도 아니고, Player가 재생된다고 서비스 지원이 확정되는 것도 아니다. <b>동일 Target에서 두 Evidence가 합쳐져야 “지원”을 닫는다.</b></div>
+</div>
+</section>
+<section class="s dark close" data-foot="CLOSING">
+<div class="grid-bg"></div>
+<div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">15 · Step 1 Deliverable → Step 2 Input</span></div>
+<h2>1단계의 끝은 PoC 종료가 아니라<br/><span class="g">2단계 서비스 통합을 시작할 수 있는 상태</span>다</h2>
+<div class="asks">
+<div class="ask"><div class="an">PLAYER</div><p><b>Player Contract v1</b>과 검증된 Android / Apple / Web 실행 계열 Adapter, Flutter facade 및 Target별 지원조건/제약을 남긴다.</p></div>
+<div class="ask"><div class="an">VALIDATION BASE</div><p>개발환경, Test Harness, 버전 manifest, Stream/DRM 구성과 Evidence를 남겨 <b>서비스 통합 후에도 같은 재생 검증을 반복</b>한다.</p></div>
+<div class="ask"><div class="an">NEXT · SERVICE RELEASE</div><p>검증 Player를 실제 App/BFF/CDN/Production DRM에 연결하고 E2E QA · Certification · Store/서비스 배포로 이어간다.</p></div>
+</div>
+</div>
+</section>
+</div>
+<div class="chrome">
+<div class="mark"><span class="dot"></span>MULTI-PLATFORM · PLAYER</div>
+<div class="idx"><b id="cur">01</b> / <span id="tot">01</span></div>
+<div class="foot" id="footlabel">OPENING</div>
+</div>
+<div class="progress" id="prog"></div>
+<div class="zone prev" id="zprev"><span class="arr">‹</span></div>
+<div class="zone next" id="znext"><span class="arr">›</span></div>
+</div>
+<button aria-label="슬라이드 목록 열기" id="navToggle"><span class="grip">Slides</span></button>
+<aside aria-label="슬라이드 네비게이터" id="navPanel">
+<div class="nav-hd"><span class="t">Slides</span><span class="c" id="navCount">01 / 01</span></div>
+<div id="navList"></div>
+</aside>
+<div aria-hidden="true" id="presenter">
+<div class="pv-top">
+<span class="pv-timer" id="pvTimer">00:00</span>
+<button class="pv-reset" id="pvReset">Reset · R</button>
+<button class="pv-reset" id="pvAudience">청중 화면 열기</button>
+<span class="pv-page" id="pvPage">01 / 01</span>
+</div>
+<div class="pv-body">
+<div class="pv-col">
+<div class="pv-lab">Now speaking</div>
+<div class="pv-notes" id="pvNotes"></div>
+</div>
+<div class="pv-col">
+<div class="pv-lab">Next</div>
+<div class="pv-thumb" id="pvNextThumb"></div>
+<div class="pv-next-notes" id="pvNextNotes"></div>
+<div class="pv-hint">P 닫기 · ← → 이동 · R 타이머 초기화 · 청중 화면은 두 창이 자동 동기화</div>
+</div>
+</div>
+</div>
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.s'));
+  var total = slides.length, i = 0;
+  var curEl=document.getElementById('cur'), totEl=document.getElementById('tot'),
+      progEl=document.getElementById('prog'), footEl=document.getElementById('footlabel'),
+      countEl=document.getElementById('navCount');
+  totEl.textContent = String(total).padStart(2,'0');
+  var navItems=[];
+  function pad(n){return String(n).padStart(2,'0');}
+
+  var fragPos=0;
+  function frags(n){
+    return Array.prototype.slice.call(slides[n].querySelectorAll('.frag'))
+      .sort(function(a,b){ return (+a.getAttribute('data-frag')||0)-(+b.getAttribute('data-frag')||0); });
+  }
+  function paintFrags(n,count){ var f=frags(n); for(var x=0;x<f.length;x++) f[x].classList.toggle('revealed', x<count); }
+
+  function show(n, fragMode){
+    n=Math.max(0,Math.min(total-1,n));
+    slides[i].classList.remove('active'); i=n; slides[i].classList.add('active');
+    fragPos = (fragMode==='none') ? 0 : frags(i).length;
+    paintFrags(i, fragPos);
+    var dark=slides[i].classList.contains('dark');
+    document.querySelector('.chrome').style.color = dark ? '#f6f5f1' : '#0d0d0d';
+    footEl.textContent = slides[i].getAttribute('data-foot') || '';
+    footEl.style.color = dark ? '#aaa9a1' : '#585750';
+    curEl.textContent = pad(i+1);
+    progEl.style.width = (((i+1)/total)*100) + '%';
+    if(countEl) countEl.textContent = pad(i+1)+' / '+pad(total);
+    for(var j=0;j<navItems.length;j++) navItems[j].classList.toggle('active', j===i);
+    if(navItems[i]) navItems[i].scrollIntoView({block:'nearest'});
+    syncPresenter();
+    broadcast();
+  }
+  function next(){
+    if(fragPos < frags(i).length){ fragPos++; paintFrags(i,fragPos); broadcast(); return; }
+    if(i<total-1) show(i+1,'none');
+  }
+  function prev(){
+    if(fragPos > 0){ fragPos--; paintFrags(i,fragPos); broadcast(); return; }
+    if(i>0) show(i-1);
+  }
+  function home(){ show(0); }
+  document.getElementById('znext').addEventListener('click', next);
+  document.getElementById('zprev').addEventListener('click', prev);
+
+  var panel=document.getElementById('navPanel'), list=document.getElementById('navList'),
+      toggle=document.getElementById('navToggle');
+  var TW=232, TS=TW/1280, TH=Math.round(720*TS);
+  function uniq(node, sfx){
+    var ided=node.querySelectorAll('[id]'); for(var a=0;a<ided.length;a++) ided[a].id+=sfx;
+    var all=node.querySelectorAll('*');
+    for(var b=0;b<all.length;b++){ var at=all[b].attributes;
+      for(var c=0;c<at.length;c++){ var v=at[c].value;
+        if(v.indexOf('url(#')>-1) at[c].value=v.replace(/url\(#([^)]+)\)/g,'url(#$1'+sfx+')');
+        else if((at[c].name==='href'||at[c].name==='xlink:href')&&v.charAt(0)==='#') at[c].value=v+sfx;
+      }
+    }
+  }
+  function thumbInner(k, ts, sfx){
+    var inner=document.createElement('div'); inner.className='nav-thumb-inner';
+    inner.style.transform='scale('+ts+')';
+    var clone=slides[k].cloneNode(true); clone.classList.add('active'); clone.removeAttribute('data-foot');
+    var cf=clone.querySelectorAll('.frag'); for(var z=0;z<cf.length;z++) cf[z].classList.add('revealed');
+    uniq(clone,sfx); inner.appendChild(clone); return inner;
+  }
+  function buildNav(){
+    slides.forEach(function(s,k){
+      var item=document.createElement('button'); item.className='nav-item';
+      var name=(s.getAttribute('data-foot')||'').trim();
+      var row=document.createElement('div'); row.className='nav-row';
+      var num=document.createElement('span'); num.className='nav-num'; num.textContent=pad(k+1);
+      var nm=document.createElement('span'); nm.className='nav-name'; nm.textContent=name||('SLIDE '+pad(k+1));
+      row.appendChild(num); row.appendChild(nm);
+      var thumb=document.createElement('div'); thumb.className='nav-thumb';
+      thumb.style.width=TW+'px'; thumb.style.height=TH+'px';
+      thumb.appendChild(thumbInner(k, TS, '_n'+k));
+      item.appendChild(row); item.appendChild(thumb);
+      item.addEventListener('click', function(){ show(k); closeNav(); });
+      list.appendChild(item); navItems.push(item);
+    });
+  }
+  function openNav(){ document.body.classList.add('nav-open'); if(navItems[i]) navItems[i].scrollIntoView({block:'nearest'}); }
+  function closeNav(){ document.body.classList.remove('nav-open'); }
+  function toggleNav(){ document.body.classList.contains('nav-open') ? closeNav() : openNav(); }
+  toggle.addEventListener('click', function(e){ e.stopPropagation(); toggleNav(); });
+  document.addEventListener('click', function(e){
+    if(document.body.classList.contains('nav-open') && !panel.contains(e.target) && !toggle.contains(e.target)) closeNav();
+  });
+  buildNav();
+
+  var pv=document.getElementById('presenter'),
+      pvTimer=document.getElementById('pvTimer'), pvPage=document.getElementById('pvPage'),
+      pvNotes=document.getElementById('pvNotes'), pvNextThumb=document.getElementById('pvNextThumb'),
+      pvNextNotes=document.getElementById('pvNextNotes');
+  var pvStart=null, pvTick=null;
+  function fmt(ms){ var s=Math.floor(ms/1000); return pad(Math.floor(s/60))+':'+pad(s%60); }
+  function tick(){ if(pvStart!==null) pvTimer.textContent=fmt(Date.now()-pvStart); }
+  function notesOf(n){ return (slides[n].getAttribute('data-notes')||'').trim(); }
+  function syncPresenter(){
+    if(!document.body.classList.contains('pv-open')) return;
+    pvPage.textContent = pad(i+1)+' / '+pad(total);
+    var nt=notesOf(i);
+    pvNotes.textContent = nt || '이 슬라이드에는 발표자 노트가 없습니다 (data-notes).';
+    pvNotes.classList.toggle('empty', !nt);
+    pvNextThumb.innerHTML='';
+    if(i<total-1){
+      var w=pvNextThumb.clientWidth||360, ts=w/1280;
+      pvNextThumb.style.height=Math.round(720*ts)+'px';
+      pvNextThumb.appendChild(thumbInner(i+1, ts, '_pv'));
+      pvNextNotes.textContent = notesOf(i+1);
+    } else {
+      pvNextThumb.style.height='0'; pvNextNotes.textContent='— 마지막 슬라이드 —';
+    }
+  }
+  function openPresenter(){
+    document.body.classList.add('pv-open'); pv.setAttribute('aria-hidden','false');
+    if(pvStart===null) pvStart=Date.now();
+    if(pvTick===null) pvTick=setInterval(tick,1000);
+    tick(); syncPresenter();
+  }
+  function closePresenter(){ document.body.classList.remove('pv-open'); pv.setAttribute('aria-hidden','true'); }
+  function togglePresenter(){ document.body.classList.contains('pv-open') ? closePresenter() : openPresenter(); }
+  function resetTimer(){ pvStart=Date.now(); tick(); }
+  document.getElementById('pvReset').addEventListener('click', resetTimer);
+
+  var SYNC_KEY='mono-deck-sync:'+(document.title||'deck');
+  var bc=null; try{ bc=new BroadcastChannel(SYNC_KEY); }catch(e){}
+  var applying=false;
+  function broadcast(){
+    if(applying) return;
+    var msg={i:i, f:fragPos, ts:Date.now()};
+    if(bc){ try{ bc.postMessage(msg); }catch(e){} }
+    try{ localStorage.setItem(SYNC_KEY, JSON.stringify(msg)); }catch(e){}
+  }
+  function applyState(msg){
+    if(!msg || typeof msg.i!=='number') return;
+    applying=true;
+    if(msg.i!==i) show(msg.i);
+    fragPos=Math.max(0,Math.min(frags(i).length, msg.f||0));
+    paintFrags(i,fragPos);
+    applying=false;
+  }
+  if(bc) bc.onmessage=function(e){ applyState(e.data); };
+  window.addEventListener('storage', function(e){
+    if(e.key!==SYNC_KEY || !e.newValue) return;
+    try{ applyState(JSON.parse(e.newValue)); }catch(err){}
+  });
+  document.getElementById('pvAudience').addEventListener('click', function(){
+    var url=location.href.split('#')[0]+'#follow';
+    window.open(url,'_blank');
+    setTimeout(broadcast, 600);
+  });
+
+  document.addEventListener('keydown', function(e){
+    var k=e.key;
+    if(k==='ArrowRight'||k==='PageDown'||k===' '){ e.preventDefault(); next(); }
+    else if(k==='ArrowLeft'||k==='PageUp'){ e.preventDefault(); prev(); }
+    else if(k==='h'||k==='H'||k==='ㅎ'||k==='Home'){ e.preventDefault(); home(); }
+    else if(k==='End'){ e.preventDefault(); show(total-1); }
+    else if(k==='m'||k==='M'||k==='ㅡ'){ e.preventDefault(); toggleNav(); }
+    else if(k==='p'||k==='P'||k==='ㅔ'){ e.preventDefault(); togglePresenter(); }
+    else if((k==='r'||k==='R'||k==='ㄱ') && document.body.classList.contains('pv-open')){ e.preventDefault(); resetTimer(); }
+    else if(k==='Escape'){ closeNav(); closePresenter(); }
+  });
+  var scaler=document.getElementById('scaler');
+  function resize(){ scaler.style.transform='scale('+Math.min(window.innerWidth/1280, window.innerHeight/720)+')'; }
+  window.addEventListener('resize', resize); resize();
+  applying=true; show(0); applying=false;
+  if(location.hash.indexOf('follow')>-1){
+    try{ var saved=localStorage.getItem(SYNC_KEY); if(saved) applyState(JSON.parse(saved)); }catch(e){}
+  }
+})();
+</script>
+</body>
+</html>
