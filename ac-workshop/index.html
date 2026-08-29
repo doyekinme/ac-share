@@ -1,1 +1,433 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AC AI Native Archive · 업무재설계 워크숍 v3</title>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@latest/dist/web/static/pretendard.min.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --ink:#24272d; --muted:#68707a; --paper:#fcfbf8; --line:#d8d7d0;
+  --mint:#dff2e8; --mint2:#eef8f3;
+  --lav:#ebe5f7; --lav2:#f5f1fb;
+  --peach:#f7e5da; --peach2:#fcf2ec;
+  --blue:#dfeaf7; --blue2:#f0f5fb;
+  --yellow:#f6edc9; --yellow2:#fbf7e5;
+  --rose:#f5e2e8; --rose2:#fbf1f4;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --sans:'Pretendard','Pretendard Variable',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:#1d1f23;font-family:var(--sans);color:var(--ink);overflow:hidden;
+  -webkit-font-smoothing:antialiased;display:flex;align-items:center;justify-content:center
+}
+#scaler{position:relative;width:1280px;height:720px;transform-origin:center center}
+.stage{position:absolute;inset:0;width:1280px;height:720px;overflow:hidden}
+.s{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .34s ease,transform .34s ease;transform:translateY(8px) scale(.998);background:var(--paper)}
+.s.active{opacity:1;pointer-events:auto;transform:none}
+.pad{position:absolute;inset:0;padding:82px 88px 70px}
+.c .pad{display:flex;flex-direction:column}
+.grow{flex:1;min-height:0}
+.soft-grid{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(34,37,42,.022) 1px,transparent 1px),linear-gradient(90deg,rgba(34,37,42,.022) 1px,transparent 1px);background-size:30px 30px}
 
+.chrome{position:absolute;inset:0;pointer-events:none;z-index:30;color:var(--ink)}
+.chrome .mark{position:absolute;top:30px;left:42px;font-family:var(--mono);font-size:12.5px;letter-spacing:.15em;font-weight:700;display:flex;align-items:center;gap:9px}
+.chrome .mark .dot{width:10px;height:10px;border:1.4px solid currentColor;display:inline-block;position:relative;border-radius:2px}
+.chrome .mark .dot::after{content:"";position:absolute;inset:2px;background:currentColor;border-radius:1px}
+.chrome .idx{position:absolute;top:30px;right:42px;font-family:var(--mono);font-size:12.5px;letter-spacing:.12em}
+.chrome .foot{position:absolute;bottom:26px;left:42px;font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--muted)}
+.progress{position:absolute;bottom:0;left:0;height:4px;z-index:31;background:linear-gradient(90deg,#a7d8c2,#c9b8eb,#eabda8,#abc8e8);transition:width .35s ease}
+.zone{position:absolute;top:0;bottom:0;width:30%;z-index:20;cursor:pointer}
+.zone.prev{left:0}.zone.next{right:0}
+.zone .arr{position:absolute;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:30px;opacity:0;transition:opacity .2s;color:var(--muted)}
+.zone.prev .arr{left:18px}.zone.next .arr{right:18px}.zone:hover .arr{opacity:.5}
+
+.head{display:flex;align-items:center;margin-bottom:8px}
+.kicker-rule{width:34px;height:2px;background:currentColor;display:inline-block;margin-right:13px}
+.eyebrow{font-family:var(--mono);font-size:13px;letter-spacing:.22em;font-weight:700;text-transform:uppercase;color:var(--muted)}
+.ttl{font-size:34px;font-weight:800;letter-spacing:-.025em;line-height:1.15;margin-bottom:13px;word-break:keep-all}
+.ttl.sm{font-size:29px}
+.sub{font-size:15.5px;line-height:1.5;color:var(--muted);max-width:1070px;margin-bottom:14px;word-break:keep-all}
+.band{margin-top:auto;padding-top:12px;border-top:1.4px solid #8d8f93;font-size:14px;line-height:1.5;color:#4d5157;word-break:keep-all}
+.band b{color:var(--ink)}
+
+.phasebar{display:grid;grid-template-columns:1.05fr 1.2fr 1fr 2.25fr 1.2fr;gap:8px;margin-top:8px}
+.phase{border-radius:12px;padding:12px 13px 11px;min-height:79px;border:1px solid rgba(34,37,42,.08)}
+.phase .k{font-family:var(--mono);font-size:11px;letter-spacing:.12em;font-weight:700;color:#555b63}
+.phase h4{font-size:15px;margin-top:6px;line-height:1.25}
+.phase p{font-size:11.5px;line-height:1.4;color:#60656d;margin-top:3px}
+.p1{background:var(--yellow2)} .p2{background:var(--mint2)} .p3{background:var(--blue2)} .p4{background:var(--lav2)} .p5{background:var(--peach2)}
+
+.tri{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:17px}
+.tricard{border-radius:16px;padding:18px 19px 16px;border:1px solid rgba(34,37,42,.09);min-height:205px}
+.tricard .n{font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.1em}
+.tricard h3{font-size:20px;margin:8px 0 9px}
+.tricard ul{padding-left:18px}
+.tricard li{font-size:13.3px;line-height:1.46;margin:5px 0;color:#444950}
+.mint{background:var(--mint)} .lav{background:var(--lav)} .peach{background:var(--peach)} .blue{background:var(--blue)} .yellow{background:var(--yellow)} .rose{background:var(--rose)}
+
+.callout{margin-top:14px;border-radius:14px;padding:12px 16px;background:#fff;border:1px solid var(--line);font-size:14px;line-height:1.48}
+.callout b{font-weight:800}
+
+.gategrid{display:grid;grid-template-columns:1.05fr 1.35fr 1.4fr .9fr 1.3fr;gap:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:9px}
+.gategrid>div{padding:9px 11px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-size:12.3px;line-height:1.38;word-break:keep-all}
+.gategrid>div:nth-child(5n){border-right:none}
+.gategrid .hdr{font-family:var(--mono);font-size:10.8px;font-weight:700;letter-spacing:.07em;background:#f1f0eb;color:#555b63}
+.gategrid .stagecell{font-weight:800}
+.gategrid .lastrow{border-bottom:none}
+.levels{display:flex;gap:8px;margin-top:12px;align-items:center}
+.lv{border-radius:999px;padding:7px 12px;font-family:var(--mono);font-size:11.3px;font-weight:700;border:1px solid rgba(34,37,42,.1)}
+.lv0{background:#f1f0eb}.lv1{background:var(--yellow)}.lv2{background:var(--blue)}.lv3{background:var(--mint)}
+
+.poc-overview{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:18px}
+.poc-card{border-radius:22px;padding:28px 30px 24px;border:1px solid rgba(34,37,42,.08);min-height:375px;display:flex;flex-direction:column}
+.poc-card .tag{font-family:var(--mono);font-size:12px;letter-spacing:.12em;font-weight:700;color:#555b63}
+.poc-card h3{font-size:29px;line-height:1.16;margin:11px 0 12px}
+.poc-card .lead{font-size:16px;line-height:1.52;color:#41464d;word-break:keep-all}
+.poc-card .simple-flow{display:flex;align-items:center;gap:8px;margin-top:22px;flex-wrap:wrap}
+.poc-card .simple-flow span{background:rgba(255,255,255,.72);border:1px solid rgba(34,37,42,.08);border-radius:10px;padding:10px 12px;font-size:13px;font-weight:700}
+.poc-card .simple-flow b{font-family:var(--mono);font-size:15px;color:#71767d}
+.poc-card .result{margin-top:auto;padding-top:18px;border-top:1px solid rgba(34,37,42,.12);font-size:14px;line-height:1.5}
+.poc-card .result b{display:block;margin-bottom:3px}
+
+/* ISMP-style process map */
+.proc-shell{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#fff;margin-top:8px}
+.proc-top{display:grid;grid-template-columns:142px repeat(7,1fr);background:#f3f2ed;border-bottom:1px solid var(--line)}
+.proc-top div{padding:8px 6px;font-family:var(--mono);font-size:10.5px;font-weight:700;color:#5e646c;text-align:center;border-right:1px solid var(--line)}
+.proc-top div:last-child{border-right:none}
+.proc-grid{display:grid;grid-template-columns:142px repeat(7,1fr);grid-auto-rows:82px}
+.role{display:flex;align-items:center;justify-content:center;text-align:center;font-size:14px;font-weight:800;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px}
+.role.customer{background:var(--yellow2)}
+.role.ai{background:var(--lav2)}
+.role.human{background:var(--mint2)}
+.role.system{background:var(--blue2)}
+.pcell{position:relative;border-right:1px solid #ecebe6;border-bottom:1px solid var(--line);padding:6px 6px;display:flex;align-items:center;justify-content:center}
+.pcell:nth-child(8n){border-right:none}
+.pbox{width:100%;border:1px solid rgba(34,37,42,.12);background:#fff;border-radius:11px;padding:7px 7px;min-height:60px;display:flex;flex-direction:column;justify-content:center;text-align:center;position:relative;z-index:2}
+.pbox .id{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.08em;color:#6d747d;margin-bottom:4px}
+.pbox h4{font-size:12.8px;line-height:1.22;margin-bottom:2px}
+.pbox p{font-size:10.1px;line-height:1.28;color:#525860}
+.pbox.ai{background:var(--lav2)}
+.pbox.human{background:var(--mint2)}
+.pbox.system{background:var(--blue2)}
+.pbox.output{background:var(--peach2)}
+.pbox.gate{border:2px solid #8abca2}
+.pbox.gate::before{content:"HUMAN GATE";position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:#8abca2;color:#fff;border-radius:10px;padding:2px 7px;font-family:var(--mono);font-size:8px;letter-spacing:.07em;white-space:nowrap}
+.arrow-r::after{content:"→";position:absolute;right:-15px;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:18px;color:#8b9198;z-index:5}
+.handoff::after{content:"↓";position:absolute;left:50%;bottom:-18px;transform:translateX(-50%);font-family:var(--mono);font-size:18px;color:#8b9198;z-index:5}
+.loop-note{position:absolute;right:8px;bottom:7px;font-family:var(--mono);font-size:9px;color:#765da5;background:var(--lav);padding:3px 6px;border-radius:8px}
+.legend{display:flex;gap:10px;align-items:center;margin-top:9px;font-size:11.5px;color:#59606a}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:12px;height:12px;border-radius:3px;border:1px solid rgba(34,37,42,.1);display:inline-block}
+.legend .lai{background:var(--lav2)} .legend .lh{background:var(--mint2)} .legend .ls{background:var(--blue2)} .legend .lo{background:var(--peach2)}
+.map-summary{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:10px;margin-top:9px}
+.ms{border-radius:12px;padding:10px 12px;border:1px solid rgba(34,37,42,.08);font-size:11.5px;line-height:1.4}
+.ms b{display:block;font-size:12px;margin-bottom:2px}
+
+.hitlrow{display:grid;grid-template-columns:1fr .85fr .9fr 1.05fr;gap:10px;margin-top:16px}
+.hitlstep{border-radius:16px;padding:16px 15px 14px;border:1px solid rgba(34,37,42,.08);min-height:132px}
+.hitlstep .n{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;color:#59606a}
+.hitlstep h4{font-size:17px;margin:7px 0 7px}
+.hitlstep p{font-size:12.8px;line-height:1.45;color:#4b5057}
+.principles{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.pr{border-radius:14px;padding:12px 14px;border:1px solid rgba(34,37,42,.08);font-size:13.3px;line-height:1.44}
+.pr b{display:block;margin-bottom:3px}
+
+.questions{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:17px}
+.q{border-radius:16px;padding:18px 17px;background:#fff;border:1px solid var(--line)}
+.q .qn{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.11em;color:var(--muted)}
+.q p{font-size:15px;line-height:1.48;margin-top:8px;font-weight:700;word-break:keep-all}
+
+#navToggle{position:fixed;left:0;top:0;bottom:0;width:20px;z-index:41;cursor:pointer;border:none;background:rgba(255,255,255,.08);color:#c7c7c2;opacity:.65;display:flex;align-items:center;justify-content:center}
+#navToggle .grip{writing-mode:vertical-rl;transform:rotate(180deg);font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.3em}
+#navPanel{position:fixed;left:0;top:0;bottom:0;width:268px;z-index:42;background:var(--paper);color:var(--ink);border-right:1px solid var(--line);display:flex;flex-direction:column;transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:0 0 44px rgba(0,0,0,.20)}
+body.nav-open #navPanel{transform:none}
+body.nav-open #navToggle{opacity:0;pointer-events:none}
+body.nav-open .zone{pointer-events:none}
+#navPanel .nav-hd{display:flex;align-items:baseline;justify-content:space-between;padding:22px 18px 14px;border-bottom:1px solid var(--line)}
+#navPanel .nav-hd .t{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.2em}
+#navPanel .nav-hd .c{font-family:var(--mono);font-size:12px;color:var(--muted)}
+#navList{flex:1;overflow-y:auto;padding:14px 14px 22px;display:flex;flex-direction:column;gap:12px}
+.nav-item{display:block;width:100%;text-align:left;padding:0;border:none;background:none;cursor:pointer}
+.nav-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.nav-num{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--muted)}
+.nav-name{font-family:var(--mono);font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav-thumb{position:relative;overflow:hidden;border:1px solid var(--line);background:#fff;pointer-events:none}
+.nav-thumb-inner{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0;pointer-events:none}
+.nav-item.active .nav-thumb{box-shadow:0 0 0 2px #8f7fbb;border-color:#8f7fbb}
+
+#presenter{position:fixed;inset:0;z-index:60;background:#15171a;color:#f2f1ec;display:none;flex-direction:column;padding:32px 42px 38px}
+body.pv-open #presenter{display:flex}
+.pv-top{display:flex;align-items:center;gap:18px;border-bottom:1px solid #383b40;padding-bottom:16px;margin-bottom:24px}
+.pv-timer{font-family:var(--mono);font-size:38px;font-weight:700}
+.pv-page{font-family:var(--mono);font-size:14px;letter-spacing:.12em;color:#aaa;margin-left:auto}
+.pv-reset{font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.1em;color:#bbb;background:none;border:1px solid #444;padding:7px 11px;cursor:pointer}
+.pv-body{flex:1;display:grid;grid-template-columns:1.35fr 1fr;gap:38px;min-height:0}
+.pv-col{display:flex;flex-direction:column;min-height:0}
+.pv-lab{font-family:var(--mono);font-size:11.5px;font-weight:700;letter-spacing:.18em;color:#888;margin-bottom:14px}
+.pv-notes{font-size:20px;line-height:1.6;color:#ecebe5;overflow-y:auto;white-space:pre-wrap}
+.pv-thumb{position:relative;overflow:hidden;border:1px solid #3d4045;background:#000;flex-shrink:0}
+.pv-thumb-inner{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0}
+.pv-next-notes{font-size:13.5px;line-height:1.5;color:#aaa;margin-top:14px;white-space:pre-wrap}
+.pv-hint{font-family:var(--mono);font-size:11px;color:#666;margin-top:16px;text-align:right}
+@media (prefers-reduced-motion: reduce){.s,#navPanel{transition:none}}
+</style>
+</head>
+<body>
+<div id="scaler">
+<div class="stage">
+
+<section class="s c active" data-foot="01 · 업무재설계 분석 프레임"
+data-notes="AI 기능부터 논의하지 않습니다. AC 신규 구축 흐름을 놓고 각 단계에서 정보·판단·확정이 어떻게 이루어지는지 먼저 봅니다. 인천사랑 프로젝트를 이 그림에 대입해 차이와 원인을 찾습니다.">
+<div class="soft-grid"></div><div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">01 · Workflow Redesign Frame</span></div>
+<h2 class="ttl">AC 신규 구축 업무재설계 분석 프레임</h2>
+<p class="sub">핵심 질문 — 각 단계에서 필요한 정보가 확보되고, 판단기준에 따라 결론이 확정된 채 다음 단계로 넘어가는가?</p>
+<div class="phasebar">
+<div class="phase p1"><div class="k">계약 전</div><h4>초기상담 → 서비스 유형 확정 → 계약</h4><p>서비스 범위와 계약 조건</p></div>
+<div class="phase p2"><div class="k">초기 컨설팅</div><h4>현황진단 + 워크숍</h4><p>조사와 조직 요구 확인</p></div>
+<div class="phase p3"><div class="k">기획</div><h4>홈페이지 기획</h4><p>초기 컨설팅의 종합 산출물</p></div>
+<div class="phase p4"><div class="k">실제 구축</div><h4>작업대상 확보 → 기록등록 · 분류 · 메타 · 공개 · 정책 · 컬렉션</h4><p>병렬·반복 관계로 수행</p></div>
+<div class="phase p5"><div class="k">전환</div><h4>홈페이지 구성 · 콘텐츠 → 오픈 · 운영</h4><p>실제 운영으로 이행</p></div>
+</div>
+<div class="tri grow">
+<div class="tricard mint"><div class="n">① INFORMATION</div><h3>정보 확보</h3><ul><li>다음 판단에 꼭 필요한 정보는 무엇인가?</li><li>누가·어떤 자료와 조사로 확보하는가?</li><li>실제 프로젝트에서 무엇이 부족했는가?</li></ul></div>
+<div class="tricard lav"><div class="n">② JUDGEMENT</div><h3>판단 기준</h3><ul><li>무엇을 기준으로 판단하는가?</li><li>기준은 문서화되어 있는가?</li><li>경험과 판단근거가 공유되는가?</li></ul></div>
+<div class="tricard peach"><div class="n">③ CONFIRMATION</div><h3>확정</h3><ul><li>이 단계에서 무엇을 확정해야 하는가?</li><li>누가 최종 판단·승인하는가?</li><li>미확정 상태로 넘어간 것은 무엇인가?</li></ul></div>
+</div>
+<div class="callout"><b>인천사랑 프로젝트에 대입</b> — 그림과 달랐던 실제 수행은 무엇인가 → 왜 그런 현상이 나타났는가 → 정상적 반복과 불필요한 재작업을 구분 → TO-BE 의견 도출</div>
+</div></section>
+
+<section class="s c" data-foot="02 · 단계별 판단 게이트"
+data-notes="모든 것을 초기부터 확정하는 것이 목표가 아닙니다. 초기에는 방향, 작업대상 확보 이후에는 작업기준, 오픈 시점에는 운영기준을 닫습니다. 너무 이른 확정과 너무 늦은 미확정을 함께 봅니다.">
+<div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">02 · Decision Gate</span></div>
+<h2 class="ttl sm">각 단계에서 무엇을 알아야 하고, 무엇을 판단하며, 어디까지 확정해야 하는가</h2>
+<div class="gategrid grow">
+<div class="hdr">단계</div><div class="hdr">필수정보</div><div class="hdr">판단사항</div><div class="hdr">확정수준</div><div class="hdr">다음 단계로 넘겨도 되는 것</div>
+<div class="stagecell yellow">초기상담</div><div>기관 목적·예산·일정<br/>자료 존재·담당자·기존시스템</div><div>적합한 서비스 유형과 기본 과업범위</div><div><b>L1</b> 방향확정</div><div>세부분류·메타·컬렉션</div>
+<div class="stagecell mint">현황진단·워크숍</div><div>기관/사업·기록현황·운영주체<br/>조직 요구·이용자·공개 기대</div><div>무엇을 중심으로 아카이브를 구성할지</div><div><b>L1</b> 방향확정</div><div>개별 기록의 최종 값</div>
+<div class="stagecell blue">홈페이지 기획</div><div>진단+워크숍 결과<br/>예상 기록범위·주요 서비스 요구</div><div>무엇을 어떤 구조로 보여줄지</div><div><b>L1</b> 방향확정</div><div>최종 화면·실제 기록 배치</div>
+<div class="stagecell lav">작업대상 확보</div><div>실제 입수 기록의 수량·유형·생산주체<br/>상태·누락·중복·시간범위</div><div>실제 구축범위와 작업단위·우선순위</div><div><b>L2</b> 작업기준</div><div>분류·메타·컬렉션 최종형</div>
+<div class="stagecell lav">실구축</div><div>실제 기록 내용·관계·출처·맥락<br/>공개조건·운영 제약</div><div>기록을 어떻게 조직·설명·공개·연결할지</div><div><b>L2</b> 작업기준</div><div>이후 유입기록에 따른 세부조정</div>
+<div class="stagecell peach">홈페이지·콘텐츠</div><div>등록 데이터·분류·메타·컬렉션<br/>정책·검증된 기록 맥락</div><div>실제 데이터가 기획한 서비스를 구현하는지</div><div><b>L2→L3</b></div><div>운영 중 개선·확장 콘텐츠</div>
+<div class="stagecell rose lastrow">오픈·운영</div><div class="lastrow">검수결과·고객확인·담당자·권한<br/>등록/공개 절차·미해소 이슈</div><div class="lastrow">공개 가능한지 / 기관이 스스로 운영 가능한지</div><div class="lastrow"><b>L3</b> 운영확정</div><div class="lastrow">장기 고도화 과제</div>
+</div>
+<div class="levels"><span class="lv lv0">L0 탐색</span><span class="lv lv1">L1 방향확정</span><span class="lv lv2">L2 작업기준 확정</span><span class="lv lv3">L3 운영기준 확정</span><span style="margin-left:auto;font-size:13px;color:var(--muted)">너무 일찍 확정? · 너무 늦게 미확정? · 필수정보 없이 판단?</span></div>
+</div></section>
+
+<section class="s c" data-foot="03 · 두 개의 첫 PoC"
+data-notes="첫 PoC 후보를 두 개로 단순화합니다. A는 구축 자동화, B는 아카이브 지능화입니다. 하나는 반복 노동을 줄이고, 다른 하나는 기록의 발견·이해·연결을 강화합니다.">
+<div class="soft-grid"></div><div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">03 · Two First PoCs</span></div>
+<h2 class="ttl">AI Native를 먼저 시험할 두 장면</h2>
+<p class="sub">기술기능 목록이 아니라, AC가 실제로 수행하는 일을 하나의 흐름으로 바꿔 본다.</p>
+<div class="poc-overview grow">
+<div class="poc-card mint">
+<div class="tag">POC A · 구축 자동화</div>
+<h3>고객 폴더를<br/>등록 가능한 데이터로</h3>
+<p class="lead">고객이 모아둔 폴더를 AI가 먼저 읽고 정리해, <b>AC 일괄등록 서식과 실제 등록</b>까지 이어지는 흐름을 만든다.</p>
+<div class="simple-flow"><span>폴더</span><b>→</b><span>파일·내용 분석</span><b>→</b><span>메타 후보</span><b>→</b><span>사람 검토</span><b>→</b><span>AC 등록</span></div>
+<div class="result"><b>목표</b>반복 작업의 시간을 줄이되, 기록단위·애매한 값·예외는 사람이 판단한다.</div>
+</div>
+<div class="poc-card lav">
+<div class="tag">POC B · 아카이브 지능화</div>
+<h3>기록을 읽고<br/>관계와 콘텐츠를 발견</h3>
+<p class="lead">AI가 기록군 전체에서 관계와 패턴의 후보를 찾고, 아키비스트가 원기록을 읽으며 <b>컬렉션·연표·기사</b>를 함께 기획한다.</p>
+<div class="simple-flow"><span>기록군</span><b>→</b><span>관계 후보</span><b>→</b><span>원기록 열람</span><b>→</b><span>콘텐츠 기획</span><b>→</b><span>기사/연표</span></div>
+<div class="result"><b>목표</b>AI가 대신 해석하는 것이 아니라, 아키비스트가 더 넓게 보고 더 깊게 읽게 한다.</div>
+</div>
+</div>
+<div class="band"><b>두 PoC의 차이</b> — A는 생산성과 정확도, B는 발견·이해·연결의 품질을 검증한다.</div>
+</div></section>
+
+<section class="s c" data-foot="04 · PoC A To-Be 업무 프로세스맵"
+data-notes="ISMP 가이드의 업무 프로세스 작성 원칙을 준용했습니다. 업무주체를 R&R 기준으로 나누고, 단위업무를 Map 형태로 배치하며, 시스템화·개선 지점을 명시합니다. PoC A는 고객기관, AI 처리서비스, 아키비스트, AC 플랫폼의 역할을 한눈에 보게 합니다.">
+<div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">04 · PoC A · To-Be Process Map</span></div>
+<h2 class="ttl sm">고객 폴더 → AC 일괄등록 → 실제 등록</h2>
+<p class="sub">ISMP 표기 원칙 준용 — <b>업무주체(R&R)별 단위업무</b>를 구분하고, 시스템화·AI 적용 및 사람 판단 지점을 함께 표시한다.</p>
+
+<div class="proc-shell grow">
+  <div class="proc-top">
+    <div>업무주체 / 단계</div><div>1. 범위확정</div><div>2. 파일분석</div><div>3. 메타구조화</div><div>4. 검토대상</div><div>5. 사람검토</div><div>6. 등록검증</div><div>7. 시스템반영</div>
+  </div>
+  <div class="proc-grid">
+    <div class="role customer">고객기관</div>
+    <div class="pcell"><div class="pbox arrow-r"><div class="id">C-01</div><h4>자료 제공</h4><p>폴더·파일 + 기존 목록·설명자료</p></div></div>
+    <div class="pcell"></div><div class="pcell"></div>
+    <div class="pcell"><div class="pbox"><div class="id">C-02</div><h4>추가정보 회신</h4><p>불명 일자·생산자·출처 확인</p></div></div>
+    <div class="pcell"></div><div class="pcell"></div><div class="pcell"></div>
+
+    <div class="role ai">AI 처리서비스</div>
+    <div class="pcell"></div>
+    <div class="pcell"><div class="pbox ai arrow-r"><div class="id">AI-01</div><h4>폴더·파일 분석</h4><p>형식·중복·파일명·구조 파악</p></div></div>
+    <div class="pcell"><div class="pbox ai arrow-r"><div class="id">AI-02</div><h4>내용 판독·메타 추출</h4><p>제목·일자·생산자·유형·설명 후보</p></div></div>
+    <div class="pcell"><div class="pbox ai handoff"><div class="id">AI-03</div><h4>AC 필드 매핑</h4><p>저신뢰·충돌·누락·중복 표시</p></div></div>
+    <div class="pcell"></div><div class="pcell"></div><div class="pcell"></div>
+
+    <div class="role human">아키비스트</div>
+    <div class="pcell"><div class="pbox human"><div class="id">H-01</div><h4>작업대상·단위 확정</h4><p>포함/제외, 묶음·개별 기록 판단</p></div></div>
+    <div class="pcell"></div><div class="pcell"></div><div class="pcell"></div>
+    <div class="pcell"><div class="pbox human gate arrow-r"><div class="id">H-02</div><h4>원기록 검토·값 확정</h4><p>예외 수정, 반복 적용 기준 승인</p></div></div>
+    <div class="pcell"></div><div class="pcell"></div>
+
+    <div class="role system">AC 플랫폼</div>
+    <div class="pcell"></div><div class="pcell"></div><div class="pcell"></div><div class="pcell"></div>
+    <div class="pcell"></div>
+    <div class="pcell"><div class="pbox system arrow-r"><div class="id">S-01</div><h4>등록 전 검증</h4><p>필수값·코드·파일매칭·형식 검사</p></div></div>
+    <div class="pcell"><div class="pbox output"><div class="id">S-02</div><h4>일괄등록·처리로그</h4><p>승인건 반영, 실패·예외건 재처리</p></div></div>
+  </div>
+</div>
+
+<div class="map-summary">
+  <div class="ms lav"><b>AI 적용 지점</b>읽기·추출·매핑·예외 선별을 선처리</div>
+  <div class="ms mint"><b>Human Gate</b>기록단위·애매한 값·반복 기준은 사람 확정</div>
+  <div class="ms blue"><b>시스템 연계</b>승인된 결과만 검증 후 일괄등록</div>
+</div>
+<div class="band"><b>PoC 검증지표</b> — 처리시간 / 메타값 채택률 / 사람 수정률 / 예외 선별 정확도 / 자동등록 성공률.</div>
+</div></section>
+
+<section class="s c" data-foot="05 · PoC B To-Be 업무 프로세스맵"
+data-notes="PoC B 역시 R&R 기준으로 나눕니다. 핵심은 AI의 답을 사람이 검수하는 구조가 아니라, AI가 탐색범위를 넓히고 아키비스트가 핵심 원기록을 직접 읽어 관계의 의미를 확정한 뒤 다시 AI 분석으로 되돌리는 반복구조입니다.">
+<div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">05 · PoC B · To-Be Process Map</span></div>
+<h2 class="ttl sm">기록 읽기 → 관계 발견 → 컬렉션·연표·기사</h2>
+<p class="sub">ISMP 표기 원칙 준용 — 업무주체별 단위업무와 시스템 지원 범위를 분리하고, <b>AI 탐색 ↔ 아키비스트 원기록 열람</b>의 반복구조를 드러낸다.</p>
+
+<div class="proc-shell grow">
+  <div class="proc-top">
+    <div>업무주체 / 단계</div><div>1. 탐색설계</div><div>2. 기록군 분석</div><div>3. 관계후보</div><div>4. 원기록 검토</div><div>5. 재탐색</div><div>6. 콘텐츠 기획</div><div>7. 제작·공개</div>
+  </div>
+  <div class="proc-grid" style="grid-auto-rows:104px;">
+    <div class="role human">아키비스트</div>
+    <div class="pcell"><div class="pbox human arrow-r"><div class="id">H-01</div><h4>탐색 질문·범위 설정</h4><p>무엇을 알고 싶은가 / 어느 기록군을 볼 것인가</p></div></div>
+    <div class="pcell"></div><div class="pcell"></div>
+    <div class="pcell"><div class="pbox human gate handoff"><div class="id">H-02</div><h4>핵심 원기록 직접 열람</h4><p>대표·경계·이상·충돌 기록을 읽고 관계 의미 판단</p></div></div>
+    <div class="pcell"></div>
+    <div class="pcell"><div class="pbox human arrow-r"><div class="id">H-03</div><h4>컬렉션·콘텐츠 관점 확정</h4><p>무엇을 함께 보여주고 어떤 메시지를 만들지 결정</p></div></div>
+    <div class="pcell"><div class="pbox human gate"><div class="id">H-04</div><h4>사실·표현 최종검증</h4><p>근거 기록 대조 후 최종 편집·공개 승인</p></div></div>
+
+    <div class="role ai">AI 분석서비스</div>
+    <div class="pcell"></div>
+    <div class="pcell"><div class="pbox ai arrow-r"><div class="id">AI-01</div><h4>기록군 스캔</h4><p>인물·기관·사건·활동·시기 후보 추출</p></div></div>
+    <div class="pcell"><div class="pbox ai arrow-r"><div class="id">AI-02</div><h4>관계·패턴 후보</h4><p>반복·변화·동시등장 + 핵심기록 추천</p></div></div>
+    <div class="pcell"></div>
+    <div class="pcell"><div class="pbox ai arrow-r"><div class="id">AI-03</div><h4>검증결과 반영 재탐색</h4><p>오류 제거, 관계 보강, 컬렉션 후보 재구성</p><span class="loop-note">H-02 결과 반영</span></div></div>
+    <div class="pcell"></div>
+    <div class="pcell"><div class="pbox ai"><div class="id">AI-04</div><h4>근거 기반 초안</h4><p>승인된 기록만으로 연표·기사·해설 초안</p></div></div>
+
+    <div class="role system">AC 콘텐츠·플랫폼</div>
+    <div class="pcell"></div><div class="pcell"></div>
+    <div class="pcell"><div class="pbox system"><div class="id">S-01</div><h4>근거기록 연결</h4><p>관계 후보와 원기록 위치를 추적 가능하게 유지</p></div></div>
+    <div class="pcell"></div>
+    <div class="pcell"><div class="pbox system arrow-r"><div class="id">S-02</div><h4>관계·컬렉션 작업공간</h4><p>선택·배제·보강 결과를 구조화하여 저장</p></div></div>
+    <div class="pcell"><div class="pbox system arrow-r"><div class="id">S-03</div><h4>콘텐츠 구성</h4><p>컬렉션·연표·관계도·기사 구조 연결</p></div></div>
+    <div class="pcell"><div class="pbox output"><div class="id">S-04</div><h4>공개 서비스</h4><p>콘텐츠와 근거 기록을 함께 제공</p></div></div>
+  </div>
+</div>
+
+<div class="map-summary">
+  <div class="ms lav"><b>AI 적용 지점</b>전체 기록군 횡단 탐색·관계/핵심기록 후보 제시</div>
+  <div class="ms mint"><b>Human Gate</b>원기록 직접 읽기 → 관계의 의미·해석 관점 확정</div>
+  <div class="ms peach"><b>콘텐츠 원칙</b>확정된 근거 기록과 관계만으로 초안·공개</div>
+</div>
+<div class="band"><b>PoC 검증지표</b> — 의미 있는 관계 발견 / 새롭게 발견한 연결 / 원기록 열람 품질 / 콘텐츠 근거 추적 가능성.</div>
+</div></section>
+
+<section class="s c" data-foot="06 · 공통 HITL 원칙"
+data-notes="두 PoC 모두 같은 원칙을 공유합니다. AI는 후보와 근거를 만들고, 사람은 판단과 확정을 담당합니다. 승인 전에는 시스템 반영이 없고, 사람의 수정과 예외를 다음 기준 개선에 활용합니다.">
+<div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">06 · Human in the Loop</span></div>
+<h2 class="ttl sm">두 PoC가 공유해야 할 공통 업무 원칙</h2>
+<div class="hitlrow">
+<div class="hitlstep blue"><div class="n">01 · AI PRE-PROCESS</div><h4>AI 선처리</h4><p>파일 읽기, 값 추출, 관계 후보, 검토 필요 항목을 먼저 만든다.</p></div>
+<div class="hitlstep yellow"><div class="n">02 · EVIDENCE</div><h4>근거 제시</h4><p>어떤 원문·기록에서 판단했는지 함께 보여준다.</p></div>
+<div class="hitlstep mint"><div class="n">03 · HUMAN</div><h4>사람 검토</h4><p>아키비스트가 원기록을 보고 수정·보완·판단한다.</p></div>
+<div class="hitlstep peach"><div class="n">04 · COMMIT</div><h4>승인 후 반영</h4><p>확정된 결과만 AC 데이터·컬렉션·콘텐츠에 반영한다.</p></div>
+</div>
+<div class="principles grow">
+<div class="pr mint"><b>전문성 원칙</b>AI가 대신 읽는 구조가 아니라, 아키비스트가 꼭 읽어야 할 기록과 판단지점을 업무 안에 남긴다.</div>
+<div class="pr lav"><b>기록 보호 원칙</b>고객이 허용한 범위 안에서만 AI가 기록을 읽고, 처리환경·접근권한·로그를 통제할 수 있어야 한다.</div>
+<div class="pr blue"><b>확정 원칙</b>AI 결과는 후보이며, 사람의 확인 전에는 실제 기록값·공개값·서비스에 자동 반영하지 않는다.</div>
+<div class="pr peach"><b>학습 원칙</b>사람이 수정한 결과와 예외를 축적해 다음 업무의 기준과 검토방식을 개선한다.</div>
+</div>
+<div class="band"><b>작업 방식의 차이</b> — 대량 처리 업무는 “AI 선처리 → 사람 검토”, 해석 업무는 “AI 탐색 → 사람 원기록 열람 → AI 재탐색 → 사람 확정”.</div>
+</div></section>
+
+<section class="s c" data-foot="07 · 직원 워크숍 질문"
+data-notes="오늘 회의의 목표는 어떤 LLM을 고르는 것이 아닙니다. 실제 AC 업무에서 먼저 바꿀 부분, 사람이 남아야 할 판단, 작은 PoC에 필요한 데이터와 기능을 정하는 것입니다.">
+<div class="soft-grid"></div><div class="pad">
+<div class="head"><span class="kicker-rule"></span><span class="eyebrow">07 · Workshop Questions</span></div>
+<h2 class="ttl">직원들과 이 세 질문만 먼저 답한다</h2>
+<p class="sub">기술 선택은 뒤로 미루고, 실제 업무와 첫 PoC의 범위를 닫는 데 집중한다.</p>
+<div class="questions grow">
+<div class="q"><div class="qn">Q1 · REPETITION</div><p>지금 신규 구축 업무에서 가장 반복적이고 시간이 많이 드는 부분은 어디인가?</p></div>
+<div class="q"><div class="qn">Q2 · HUMAN JUDGEMENT</div><p>AI가 먼저 처리해도 되는 일과 사람이 반드시 직접 해야 하는 일은 무엇인가?</p></div>
+<div class="q"><div class="qn">Q3 · FIRST POC</div><p>실제로 시험하려면 어떤 기록·데이터·기능이 필요하고, 성공을 무엇으로 판단할 것인가?</p></div>
+</div>
+<div class="callout" style="background:var(--lav2)"><b>회의 결과로 남길 것</b> — ① 첫 PoC 1~2개 ② AI 처리 범위 ③ 사람 검토·승인 지점 ④ 필요한 기록/데이터 ⑤ 보안·권한 전제 ⑥ 검증 지표</div>
+<div class="band"><b>다음 단계</b> — PoC 결과를 신규 구축 업무모델의 단계별 판단 게이트에 다시 대입해 TO-BE와 AI 도입 이행과제를 확정한다.</div>
+</div></section>
+
+</div>
+<div class="chrome"><div class="mark"><span class="dot"></span>ARCHIVE CENTER · AI NATIVE</div><div class="idx"><b id="cur">01</b> / <span id="tot">07</span></div><div class="foot" id="footlabel">01 · 업무재설계 분석 프레임</div></div>
+<div class="progress" id="prog"></div>
+<div class="zone prev" id="zprev"><span class="arr">‹</span></div>
+<div class="zone next" id="znext"><span class="arr">›</span></div>
+</div>
+
+<button aria-label="슬라이드 목록 열기" id="navToggle"><span class="grip">Slides</span></button>
+<aside aria-label="슬라이드 네비게이터" id="navPanel"><div class="nav-hd"><span class="t">Slides</span><span class="c" id="navCount">01 / 07</span></div><div id="navList"></div></aside>
+
+<div aria-hidden="true" id="presenter">
+<div class="pv-top"><span class="pv-timer" id="pvTimer">00:00</span><button class="pv-reset" id="pvReset">Reset · R</button><button class="pv-reset" id="pvAudience">청중 화면 열기</button><span class="pv-page" id="pvPage">01 / 07</span></div>
+<div class="pv-body">
+<div class="pv-col"><div class="pv-lab">Now speaking</div><div class="pv-notes" id="pvNotes"></div></div>
+<div class="pv-col"><div class="pv-lab">Next</div><div class="pv-thumb" id="pvNextThumb"></div><div class="pv-next-notes" id="pvNextNotes"></div><div class="pv-hint">P 닫기 · ← → 이동 · R 타이머 초기화 · M 슬라이드 목록</div></div>
+</div></div>
+
+<script>
+(function(){
+  var slides=[].slice.call(document.querySelectorAll('.s')); var total=slides.length,i=0;
+  var curEl=document.getElementById('cur'),totEl=document.getElementById('tot'),progEl=document.getElementById('prog'),footEl=document.getElementById('footlabel'),countEl=document.getElementById('navCount');
+  function pad(n){return String(n).padStart(2,'0')} totEl.textContent=pad(total);
+  var navItems=[];
+  function show(n){
+    n=Math.max(0,Math.min(total-1,n)); slides[i].classList.remove('active'); i=n; slides[i].classList.add('active');
+    curEl.textContent=pad(i+1); progEl.style.width=(((i+1)/total)*100)+'%'; footEl.textContent=slides[i].getAttribute('data-foot')||''; countEl.textContent=pad(i+1)+' / '+pad(total);
+    navItems.forEach(function(x,k){x.classList.toggle('active',k===i)}); if(navItems[i])navItems[i].scrollIntoView({block:'nearest'}); syncPresenter(); broadcast();
+  }
+  function next(){if(i<total-1)show(i+1)} function prev(){if(i>0)show(i-1)}
+  document.getElementById('znext').onclick=next; document.getElementById('zprev').onclick=prev;
+
+  var panel=document.getElementById('navPanel'),list=document.getElementById('navList'),toggle=document.getElementById('navToggle'); var TW=232,TS=TW/1280,TH=Math.round(720*TS);
+  function uniq(node,sfx){[].slice.call(node.querySelectorAll('[id]')).forEach(function(el){el.id+=sfx})}
+  function thumbInner(k,ts,sfx){var inner=document.createElement('div');inner.className='nav-thumb-inner';inner.style.transform='scale('+ts+')';var clone=slides[k].cloneNode(true);clone.classList.add('active');clone.removeAttribute('data-foot');uniq(clone,sfx);inner.appendChild(clone);return inner}
+  slides.forEach(function(s,k){var item=document.createElement('button');item.className='nav-item';var row=document.createElement('div');row.className='nav-row';var num=document.createElement('span');num.className='nav-num';num.textContent=pad(k+1);var nm=document.createElement('span');nm.className='nav-name';nm.textContent=s.getAttribute('data-foot')||('SLIDE '+pad(k+1));row.appendChild(num);row.appendChild(nm);var thumb=document.createElement('div');thumb.className='nav-thumb';thumb.style.width=TW+'px';thumb.style.height=TH+'px';thumb.appendChild(thumbInner(k,TS,'_n'+k));item.appendChild(row);item.appendChild(thumb);item.onclick=function(){show(k);document.body.classList.remove('nav-open')};list.appendChild(item);navItems.push(item)});
+  toggle.onclick=function(e){e.stopPropagation();document.body.classList.toggle('nav-open')}; document.addEventListener('click',function(e){if(document.body.classList.contains('nav-open')&&!panel.contains(e.target)&&!toggle.contains(e.target))document.body.classList.remove('nav-open')});
+
+  var pv=document.getElementById('presenter'),pvTimer=document.getElementById('pvTimer'),pvPage=document.getElementById('pvPage'),pvNotes=document.getElementById('pvNotes'),pvNextThumb=document.getElementById('pvNextThumb'),pvNextNotes=document.getElementById('pvNextNotes'); var pvStart=null,pvTick=null;
+  function fmt(ms){var s=Math.floor(ms/1000);return pad(Math.floor(s/60))+':'+pad(s%60)} function tick(){if(pvStart!==null)pvTimer.textContent=fmt(Date.now()-pvStart)} function notesOf(n){return(slides[n].getAttribute('data-notes')||'').trim()}
+  function syncPresenter(){if(!document.body.classList.contains('pv-open'))return;pvPage.textContent=pad(i+1)+' / '+pad(total);pvNotes.textContent=notesOf(i)||'발표자 노트 없음';pvNextThumb.innerHTML='';if(i<total-1){var w=pvNextThumb.clientWidth||360,ts=w/1280;pvNextThumb.style.height=Math.round(720*ts)+'px';pvNextThumb.appendChild(thumbInner(i+1,ts,'_pv'));pvNextNotes.textContent=notesOf(i+1)}else{pvNextThumb.style.height='0';pvNextNotes.textContent='— 마지막 슬라이드 —'}}
+  function togglePresenter(){if(document.body.classList.contains('pv-open')){document.body.classList.remove('pv-open');pv.setAttribute('aria-hidden','true')}else{document.body.classList.add('pv-open');pv.setAttribute('aria-hidden','false');if(pvStart===null)pvStart=Date.now();if(pvTick===null)pvTick=setInterval(tick,1000);tick();syncPresenter()}}
+  function resetTimer(){pvStart=Date.now();tick()} document.getElementById('pvReset').onclick=resetTimer;
+
+  var SYNC_KEY='ac-ai-native-deck-sync-v3',bc=null,applying=false; try{bc=new BroadcastChannel(SYNC_KEY)}catch(e){}
+  function broadcast(){if(applying)return;var msg={i:i,ts:Date.now()};if(bc)try{bc.postMessage(msg)}catch(e){}try{localStorage.setItem(SYNC_KEY,JSON.stringify(msg))}catch(e){}}
+  function applyState(msg){if(!msg||typeof msg.i!=='number')return;applying=true;show(msg.i);applying=false}
+  if(bc)bc.onmessage=function(e){applyState(e.data)}; window.addEventListener('storage',function(e){if(e.key===SYNC_KEY&&e.newValue)try{applyState(JSON.parse(e.newValue))}catch(err){}});
+  document.getElementById('pvAudience').onclick=function(){window.open(location.href.split('#')[0]+'#follow','_blank');setTimeout(broadcast,500)};
+
+  document.addEventListener('keydown',function(e){var k=e.key;if(k==='ArrowRight'||k==='PageDown'||k===' '){e.preventDefault();next()}else if(k==='ArrowLeft'||k==='PageUp'){e.preventDefault();prev()}else if(k==='Home'){e.preventDefault();show(0)}else if(k==='End'){e.preventDefault();show(total-1)}else if(k==='m'||k==='M'||k==='ㅡ'){e.preventDefault();document.body.classList.toggle('nav-open')}else if(k==='p'||k==='P'||k==='ㅔ'){e.preventDefault();togglePresenter()}else if((k==='r'||k==='R'||k==='ㄱ')&&document.body.classList.contains('pv-open')){e.preventDefault();resetTimer()}else if(k==='Escape'){document.body.classList.remove('nav-open','pv-open')}});
+  var scaler=document.getElementById('scaler'); function resize(){scaler.style.transform='scale('+Math.min(window.innerWidth/1280,window.innerHeight/720)+')'} window.addEventListener('resize',resize);resize();show(0);
+  if(location.hash.indexOf('follow')>-1){try{var saved=localStorage.getItem(SYNC_KEY);if(saved)applyState(JSON.parse(saved))}catch(e){}}
+})();
+</script>
+</body>
+</html>
